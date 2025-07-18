@@ -4,16 +4,20 @@ import { FaPlus, FaTrash, FaRocket } from "react-icons/fa";
 
 export default function Home() {
   const [task, setTask] = useState("");
-  const [tasks, setTasks] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<{ text: string; completed: boolean }[]>([]);
 
   const handleAddTask = () => {
     if (task.trim() === "") return;
-    setTasks([...tasks, task.trim()]);
+    setTasks([...tasks, { text: task.trim(), completed: false }]);
     setTask("");
   };
 
   const handleDeleteTask = (index: number) => {
     setTasks(tasks.filter((_, i) => i !== index));
+  };
+
+  const handleToggleTask = (index: number) => {
+    setTasks(tasks.map((t, i) => i === index ? { ...t, completed: !t.completed } : t));
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -69,9 +73,19 @@ export default function Home() {
                 className="group bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30 hover:bg-white/30 hover:border-white/50 transition-all duration-300 transform hover:scale-102 hover:shadow-lg"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-white font-medium text-lg flex-1">
-                    📝 {t}
-                  </span>
+                  <div className="flex items-center flex-1 gap-3">
+                    <input
+                      type="checkbox"
+                      checked={t.completed}
+                      onChange={() => handleToggleTask(i)}
+                      className="w-5 h-5 accent-yellow-400 cursor-pointer"
+                    />
+                    <span
+                      className={`text-white font-medium text-lg flex-1 ${t.completed ? 'line-through opacity-60' : ''}`}
+                    >
+                      📝 {t.text}
+                    </span>
+                  </div>
                   <button
                     onClick={() => handleDeleteTask(i)}
                     className="ml-4 text-red-300 hover:text-red-100 hover:bg-red-500/30 p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 transform hover:scale-110"
