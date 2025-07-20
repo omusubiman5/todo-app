@@ -1,13 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash } from "react-icons/fa";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/components/AuthProvider";
 
 const STORAGE_KEY = 'todo-app-tasks';
 const DARK_MODE_KEY = 'todo-app-dark-mode';
 
-const saveToStorage = (tasks: { text: string; completed: boolean; priority: "高" | "中" | "低" }[]) => {
+type Task = {
+  id: string;
+  text: string;
+  completed: boolean;
+  priority: "高" | "中" | "低";
+};
+
+const saveToStorage = (tasks: Task[]) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   } catch (error) {
@@ -15,7 +20,7 @@ const saveToStorage = (tasks: { text: string; completed: boolean; priority: "高
   }
 };
 
-const loadFromStorage = (): { text: string; completed: boolean; priority: "高" | "中" | "低" }[] => {
+const loadFromStorage = (): Task[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -48,55 +53,23 @@ const loadDarkMode = (): boolean => {
 };
 
 export default function Home() {
-  const { user } = useAuth();
   const [task, setTask] = useState("");
   const [priority, setPriority] = useState<"高" | "中" | "低">("中");
-  const [tasks, setTasks] = useState<Array<{ id: string; text: string; completed: boolean; priority: "高" | "中" | "低"; user_id: string }>>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editPriority, setEditPriority] = useState<"高" | "中" | "低">("中");
   const [sortByPriority, setSortByPriority] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Supabaseからタスク取得
+  // ローカルストレージからタスクとダークモード設定を読み込み
   useEffect(() => {
-    if (!user) {
-      setTasks([]);
-      setEditingIndex(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const fetchTasks = async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("id, text, completed, priority, user_id")
-        .eq("user_id", user.id)
-        .order("id", { ascending: true });
-      if (error) {
-        setError("タスクの取得に失敗しました");
-      } else {
-        setTasks(data || []);
-      }
-      setLoading(false);
-    };
-    fetchTasks();
-    // リアルタイムサブスクリプション
-    const channel = supabase
-      .channel('realtime-tasks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${user.id}` }, payload => {
-        fetchTasks();
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+    const savedTasks = loadFromStorage();
+    const savedDarkMode = loadDarkMode();
+    setTasks(savedTasks);
+    setDarkMode(savedDarkMode);
+  }, []);
 
   // ダークモード切替
   const toggleDarkMode = () => {
@@ -106,37 +79,35 @@ export default function Home() {
   };
 
   // タスク追加
-  const handleAddTask = async () => {
-    if (!user || task.trim() === "") return;
-    setError(null);
-    setLoading(true);
-    const { error } = await supabase.from("tasks").insert({ text: task.trim(), completed: false, priority, user_id: user.id });
-    if (error) setError("タスクの追加に失敗しました");
+  const handleAddTask = () => {
+    if (task.trim() === "") return;
+    const newTask: Task = {
+      id: Date.now().toString(),
+      text: task.trim(),
+      completed: false,
+      priority
+    };
+    const newTasks = [...tasks, newTask];
+    setTasks(newTasks);
+    saveToStorage(newTasks);
     setTask("");
     setPriority("中");
-    setLoading(false);
   };
 
   // タスク削除
-  const handleDeleteTask = async (index: number) => {
-    if (!user) return;
-    setError(null);
-    setLoading(true);
-    const id = tasks[index].id;
-    const { error } = await supabase.from("tasks").delete().eq("id", id).eq("user_id", user.id);
-    if (error) setError("タスクの削除に失敗しました");
-    setLoading(false);
+  const handleDeleteTask = (index: number) => {
+    const newTasks = tasks.filter((_, i) => i !== index);
+    setTasks(newTasks);
+    saveToStorage(newTasks);
+    setEditingIndex(null);
   };
 
   // タスク完了トグル
-  const handleToggleTask = async (index: number) => {
-    if (!user) return;
-    setError(null);
-    setLoading(true);
-    const t = tasks[index];
-    const { error } = await supabase.from("tasks").update({ completed: !t.completed }).eq("id", t.id).eq("user_id", user.id);
-    if (error) setError("タスクの更新に失敗しました");
-    setLoading(false);
+  const handleToggleTask = (index: number) => {
+    const newTasks = [...tasks];
+    newTasks[index] = { ...newTasks[index], completed: !newTasks[index].completed };
+    setTasks(newTasks);
+    saveToStorage(newTasks);
   };
 
   // 編集開始
@@ -146,15 +117,12 @@ export default function Home() {
     setEditPriority(tasks[index].priority);
   };
   // 編集保存
-  const handleEditSave = async (index: number) => {
-    if (!user) return;
-    setError(null);
-    setLoading(true);
-    const t = tasks[index];
-    const { error } = await supabase.from("tasks").update({ text: editText, priority: editPriority }).eq("id", t.id).eq("user_id", user.id);
-    if (error) setError("タスクの編集に失敗しました");
+  const handleEditSave = (index: number) => {
+    const newTasks = [...tasks];
+    newTasks[index] = { ...newTasks[index], text: editText, priority: editPriority };
+    setTasks(newTasks);
+    saveToStorage(newTasks);
     setEditingIndex(null);
-    setLoading(false);
   };
   const handleEditCancel = () => {
     setEditingIndex(null);
@@ -283,22 +251,7 @@ export default function Home() {
             ? 'bg-gray-800/50 border-gray-700' 
             : 'bg-white/10 border-white/20'
         }`}>
-          {loading && !error ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4 animate-spin">⚙️</div>
-              <p className={`text-lg font-medium mb-2 ${
-                darkMode ? 'text-gray-300' : 'text-white/80'
-              }`}>
-                タスクを読み込み中...
-              </p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-12 text-red-400">
-              <div className="text-6xl mb-4">❌</div>
-              <p className="text-lg font-medium mb-2">{error}</p>
-              <p className="text-sm">もう一度試してください</p>
-            </div>
-          ) : tasks.length === 0 ? (
+          {tasks.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4 animate-bounce">🎉</div>
               <p className={`text-lg font-medium mb-2 ${
