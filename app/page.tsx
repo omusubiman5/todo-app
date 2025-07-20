@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaWifi, FaExclamationTriangle } from "react-icons/fa";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
 
 const STORAGE_KEY = 'todo-app-tasks';
 const DARK_MODE_KEY = 'todo-app-dark-mode';
@@ -10,6 +12,9 @@ type Task = {
   text: string;
   completed: boolean;
   priority: "高" | "中" | "低";
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const saveToStorage = (tasks: Task[]) => {
@@ -53,6 +58,7 @@ const loadDarkMode = (): boolean => {
 };
 
 export default function Home() {
+  const { user } = useAuth();
   const [task, setTask] = useState("");
   const [priority, setPriority] = useState<"高" | "中" | "低">("中");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -62,14 +68,104 @@ export default function Home() {
   const [sortByPriority, setSortByPriority] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  // ローカルストレージからタスクとダークモード設定を読み込み
+  // オンライン状態の監視
   useEffect(() => {
-    const savedTasks = loadFromStorage();
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // ダークモード設定の読み込み
+  useEffect(() => {
     const savedDarkMode = loadDarkMode();
-    setTasks(savedTasks);
     setDarkMode(savedDarkMode);
   }, []);
+
+  // Supabaseからタスク取得とリアルタイム更新
+  useEffect(() => {
+    if (!user) {
+      setTasks([]);
+      setEditingIndex(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    
+    const fetchTasks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("tasks")
+          .select("id, text, completed, priority, user_id, created_at, updated_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true });
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          setError("タスクの取得に失敗しました");
+          // オフライン時はローカルストレージから読み込み
+          const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
+          setTasks(localTasks);
+        } else {
+          setTasks(data || []);
+          // Supabaseから取得できた場合はローカルストレージにも保存
+          saveToStorage(data || []);
+          setLastSyncTime(new Date());
+        }
+      } catch (err) {
+        console.error('Network error:', err);
+        setError("ネットワークエラーが発生しました");
+        // ネットワークエラー時はローカルストレージから読み込み
+        const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
+        setTasks(localTasks);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+
+    // リアルタイムサブスクリプション
+    const channel = supabase
+      .channel('realtime-tasks')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'tasks',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          fetchTasks(); // リアルタイム更新時に再取得
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setIsOnline(true);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // ダークモード切替
   const toggleDarkMode = () => {
@@ -79,35 +175,128 @@ export default function Home() {
   };
 
   // タスク追加
-  const handleAddTask = () => {
-    if (task.trim() === "") return;
+  const handleAddTask = async () => {
+    if (!user || task.trim() === "") return;
+    
+    setError(null);
     const newTask: Task = {
-      id: Date.now().toString(),
+      id: `temp-${Date.now()}`,
       text: task.trim(),
       completed: false,
-      priority
+      priority,
+      user_id: user.id
     };
+
+    // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks, newTask];
     setTasks(newTasks);
-    saveToStorage(newTasks);
     setTask("");
     setPriority("中");
+
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert({
+          text: newTask.text,
+          completed: newTask.completed,
+          priority: newTask.priority,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        // エラー時はローカルストレージに保存
+        saveToStorage(newTasks);
+        setError("タスクの追加に失敗しました（オフラインで保存されました）");
+      } else {
+        // 成功時は一時IDを正式IDに更新
+        const updatedTasks = newTasks.map(t => 
+          t.id === newTask.id ? { ...data, user_id: user.id } : t
+        );
+        setTasks(updatedTasks);
+        saveToStorage(updatedTasks);
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Network error during insert:', err);
+      // ネットワークエラー時はローカルストレージに保存
+      saveToStorage(newTasks);
+      setError("オフライン中です（ローカルに保存されました）");
+    }
   };
 
   // タスク削除
-  const handleDeleteTask = (index: number) => {
+  const handleDeleteTask = async (index: number) => {
+    if (!user) return;
+
+    const taskToDelete = tasks[index];
+    setError(null);
+
+    // 楽観的更新：UIから即座に削除
     const newTasks = tasks.filter((_, i) => i !== index);
     setTasks(newTasks);
-    saveToStorage(newTasks);
     setEditingIndex(null);
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", taskToDelete.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error('Supabase delete error:', error);
+        // エラー時は元に戻す
+        setTasks(tasks);
+        setError("タスクの削除に失敗しました");
+      } else {
+        saveToStorage(newTasks);
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Network error during delete:', err);
+      // ネットワークエラー時はローカルで削除のまま
+      saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで削除されました）");
+    }
   };
 
   // タスク完了トグル
-  const handleToggleTask = (index: number) => {
+  const handleToggleTask = async (index: number) => {
+    if (!user) return;
+
+    const taskToUpdate = tasks[index];
+    setError(null);
+
+    // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
     newTasks[index] = { ...newTasks[index], completed: !newTasks[index].completed };
     setTasks(newTasks);
-    saveToStorage(newTasks);
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ completed: !taskToUpdate.completed })
+        .eq("id", taskToUpdate.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        // エラー時は元に戻す
+        setTasks(tasks);
+        setError("タスクの更新に失敗しました");
+      } else {
+        saveToStorage(newTasks);
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Network error during update:', err);
+      // ネットワークエラー時はローカルで更新のまま
+      saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで更新されました）");
+    }
   };
 
   // 編集開始
@@ -117,12 +306,44 @@ export default function Home() {
     setEditPriority(tasks[index].priority);
   };
   // 編集保存
-  const handleEditSave = (index: number) => {
+  const handleEditSave = async (index: number) => {
+    if (!user) return;
+
+    const taskToUpdate = tasks[index];
+    setError(null);
+
+    // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
     newTasks[index] = { ...newTasks[index], text: editText, priority: editPriority };
     setTasks(newTasks);
-    saveToStorage(newTasks);
     setEditingIndex(null);
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ 
+          text: editText,
+          priority: editPriority
+        })
+        .eq("id", taskToUpdate.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        // エラー時は元に戻す
+        setTasks(tasks);
+        setEditingIndex(index);
+        setError("タスクの編集に失敗しました");
+      } else {
+        saveToStorage(newTasks);
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Network error during update:', err);
+      // ネットワークエラー時はローカルで更新のまま
+      saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで編集されました）");
+    }
   };
   const handleEditCancel = () => {
     setEditingIndex(null);
@@ -146,6 +367,36 @@ export default function Home() {
     return sorted.filter(t => !t.completed);
   };
 
+  // 認証されていない場合はログインページにリダイレクト
+  if (!user) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center transition-all duration-500 ${
+        darkMode 
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+          : 'bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600'
+      }`}>
+        <div className={`text-center p-8 rounded-2xl backdrop-blur-md border ${
+          darkMode 
+            ? 'bg-gray-800/50 border-gray-700 text-white' 
+            : 'bg-white/10 border-white/20 text-white'
+        }`}>
+          <h1 className="text-3xl font-bold mb-4">🎯 やることリスト</h1>
+          <p className="text-lg mb-6">ログインしてタスクを管理しましょう</p>
+          <a 
+            href="/login"
+            className={`inline-block px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 ${
+              darkMode 
+                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                : 'bg-white/20 hover:bg-white/30 text-white'
+            }`}
+          >
+            ログインページへ
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen transition-all duration-500 ${
       darkMode 
@@ -160,16 +411,44 @@ export default function Home() {
             }`}>
               🎯 やることリスト 🎯
             </h1>
-            <button
-              onClick={toggleDarkMode}
-              className={`p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
-                darkMode 
-                  ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300' 
-                  : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              {darkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* 接続状態インジケーター */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                isOnline 
+                  ? (darkMode ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-green-400/20 text-green-300 border border-green-400/30')
+                  : (darkMode ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-red-400/20 text-red-300 border border-red-400/30')
+              }`}>
+                {isOnline ? (
+                  <>
+                    <FaWifi size={14} />
+                    <span>オンライン</span>
+                  </>
+                ) : (
+                  <>
+                    <FaExclamationTriangle size={14} />
+                    <span>オフライン</span>
+                  </>
+                )}
+              </div>
+              {/* 最終同期時刻 */}
+              {lastSyncTime && (
+                <div className={`text-xs px-2 py-1 rounded ${
+                  darkMode ? 'text-gray-400' : 'text-white/60'
+                }`}>
+                  最終同期: {lastSyncTime.toLocaleTimeString()}
+                </div>
+              )}
+              <button
+                onClick={toggleDarkMode}
+                className={`p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
+                  darkMode 
+                    ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300' 
+                    : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
+                }`}
+              >
+                {darkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
+              </button>
+            </div>
           </div>
           <p className={`text-xl font-medium ${
             darkMode ? 'text-gray-300' : 'text-white/90'
