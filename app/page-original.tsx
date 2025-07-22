@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaWifi, FaExclamationTriangle, FaUser, FaSignOutAlt } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaWifi, FaExclamationTriangle, FaUser } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -17,15 +16,6 @@ type Task = {
   user_id: string;
   created_at?: string;
   updated_at?: string;
-};
-
-type Profile = {
-  id: string;
-  display_name: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
 };
 
 const saveToStorage = (tasks: Task[]) => {
@@ -80,9 +70,10 @@ export default function Home() {
   const [sortByPriority, setSortByPriority] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
 
   // オンライン状態の監視
   useEffect(() => {
@@ -109,9 +100,14 @@ export default function Home() {
     if (!user) {
       setTasks([]);
       setEditingIndex(null);
+      setError(null);
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
+    setError(null);
+    
     const fetchTasks = async () => {
       try {
         const { data, error } = await supabase
@@ -122,6 +118,7 @@ export default function Home() {
         
         if (error) {
           console.error('Supabase error:', error);
+          setError("タスクの取得に失敗しました");
           // オフライン時はローカルストレージから読み込み
           const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
           setTasks(localTasks);
@@ -133,9 +130,12 @@ export default function Home() {
         }
       } catch (err) {
         console.error('Network error:', err);
+        setError("ネットワークエラーが発生しました");
         // ネットワークエラー時はローカルストレージから読み込み
         const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
         setTasks(localTasks);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -169,52 +169,6 @@ export default function Home() {
     };
   }, [user]);
 
-  // プロフィール情報取得
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-        } else if (data) {
-          setProfile(data);
-        } else {
-          // プロフィールが存在しない場合は自動作成
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              display_name: null,
-              bio: null,
-              avatar_url: null
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Error creating profile:', createError);
-          } else {
-            setProfile(newProfile);
-          }
-        }
-      } catch (err) {
-        console.error('Profile fetch error:', err);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
-
   // ダークモード切替
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -222,19 +176,11 @@ export default function Home() {
     saveDarkMode(newDarkMode);
   };
 
-  // ログアウト機能
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      router.push('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
-
   // タスク追加
   const handleAddTask = async () => {
     if (!user || task.trim() === "") return;
+    
+    setError(null);
     const newTask: Task = {
       id: `temp-${Date.now()}`,
       text: task.trim(),
@@ -265,6 +211,7 @@ export default function Home() {
         console.error('Supabase insert error:', error);
         // エラー時はローカルストレージに保存
         saveToStorage(newTasks);
+        setError("タスクの追加に失敗しました（オフラインで保存されました）");
       } else {
         // 成功時は一時IDを正式IDに更新
         const updatedTasks = newTasks.map(t => 
@@ -278,6 +225,7 @@ export default function Home() {
       console.error('Network error during insert:', err);
       // ネットワークエラー時はローカルストレージに保存
       saveToStorage(newTasks);
+      setError("オフライン中です（ローカルに保存されました）");
     }
   };
 
@@ -286,6 +234,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToDelete = tasks[index];
+    setError(null);
 
     // 楽観的更新：UIから即座に削除
     const newTasks = tasks.filter((_, i) => i !== index);
@@ -303,6 +252,7 @@ export default function Home() {
         console.error('Supabase delete error:', error);
         // エラー時は元に戻す
         setTasks(tasks);
+        setError("タスクの削除に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -311,6 +261,7 @@ export default function Home() {
       console.error('Network error during delete:', err);
       // ネットワークエラー時はローカルで削除のまま
       saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで削除されました）");
     }
   };
 
@@ -319,6 +270,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToUpdate = tasks[index];
+    setError(null);
 
     // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
@@ -336,6 +288,7 @@ export default function Home() {
         console.error('Supabase update error:', error);
         // エラー時は元に戻す
         setTasks(tasks);
+        setError("タスクの更新に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -344,6 +297,7 @@ export default function Home() {
       console.error('Network error during update:', err);
       // ネットワークエラー時はローカルで更新のまま
       saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで更新されました）");
     }
   };
 
@@ -358,6 +312,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToUpdate = tasks[index];
+    setError(null);
 
     // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
@@ -380,6 +335,7 @@ export default function Home() {
         // エラー時は元に戻す
         setTasks(tasks);
         setEditingIndex(index);
+        setError("タスクの編集に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -388,6 +344,7 @@ export default function Home() {
       console.error('Network error during update:', err);
       // ネットワークエラー時はローカルで更新のまま
       saveToStorage(newTasks);
+      setError("オフライン中です（ローカルで編集されました）");
     }
   };
   const handleEditCancel = () => {
@@ -449,46 +406,14 @@ export default function Home() {
         : 'bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600'
     }`}>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* プロフィール情報表示エリア */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div 
-            className="flex items-center gap-4 cursor-pointer group transition-all duration-300 hover:scale-105"
-            onClick={() => router.push('/profile')}
-            title="プロフィール設定へ"
-          >
-            {/* プロフィール画像 */}
-            <div className="w-12 h-12 relative group-hover:shadow-lg transition-all duration-300">
-              {profile?.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt="プロフィール画像"
-                  width={48}
-                  height={48}
-                  className="w-full h-full rounded-full object-cover border-2 border-white/30 group-hover:border-white/50"
-                  priority
-                />
-              ) : (
-                <div className="w-full h-full bg-white/20 group-hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-300">
-                  <FaUser size={20} />
-                </div>
-              )}
-            </div>
-            
-            {/* プロフィール情報 */}
-            <div className="text-left">
-              <p className={`font-semibold group-hover:text-yellow-300 transition-colors duration-300 ${darkMode ? 'text-white' : 'text-white'}`}>
-                {profile?.display_name || user?.email || 'ユーザー'}
-              </p>
-              <p className={`text-sm opacity-80 ${darkMode ? 'text-gray-300' : 'text-white/80'}`}>
-                こんにちは！
-              </p>
-            </div>
-          </div>
-          
-          {/* 右側のボタン群 */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            {/* 接続状態とボタンの行 */}
-            <div className="flex items-center gap-2 justify-between sm:justify-center w-full sm:w-auto">
+        <div className="text-center mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className={`text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg ${
+              darkMode ? 'text-white' : 'text-white'
+            }`}>
+              🎯 やることリスト 🎯
+            </h1>
+            <div className="flex items-center gap-3">
               {/* 接続状態インジケーター */}
               <div className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 isOnline 
@@ -498,60 +423,46 @@ export default function Home() {
                 {isOnline ? (
                   <>
                     <FaWifi size={14} />
-                    <span className="hidden sm:inline">オンライン</span>
+                    <span>オンライン</span>
                   </>
                 ) : (
                   <>
                     <FaExclamationTriangle size={14} />
-                    <span className="hidden sm:inline">オフライン</span>
+                    <span>オフライン</span>
                   </>
                 )}
               </div>
-              
-              {/* ボタン群 */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleDarkMode}
-                  className={`p-2 sm:p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
-                    darkMode 
-                      ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300' 
-                      : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
-                  }`}
-                  title="ダークモード切替"
-                >
-                  {darkMode ? <FaSun size={16} /> : <FaMoon size={16} />}
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className={`p-2 sm:p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
-                    darkMode 
-                      ? 'bg-red-500 text-white hover:bg-red-600' 
-                      : 'bg-red-400 text-white hover:bg-red-500'
-                  }`}
-                  title="ログアウト"
-                >
-                  <FaSignOutAlt size={16} />
-                </button>
-              </div>
+              {/* 最終同期時刻 */}
+              {lastSyncTime && (
+                <div className={`text-xs px-2 py-1 rounded ${
+                  darkMode ? 'text-gray-400' : 'text-white/60'
+                }`}>
+                  最終同期: {lastSyncTime.toLocaleTimeString()}
+                </div>
+              )}
+              <button
+                onClick={() => router.push('/profile')}
+                className={`p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
+                  darkMode 
+                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+                title="プロフィール"
+              >
+                <FaUser size={20} />
+              </button>
+              <button
+                onClick={toggleDarkMode}
+                className={`p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
+                  darkMode 
+                    ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300' 
+                    : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
+                }`}
+              >
+                {darkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
+              </button>
             </div>
-            
-            {/* 最終同期時刻 */}
-            {lastSyncTime && (
-              <div className={`text-xs px-2 py-1 rounded text-center sm:text-left ${
-                darkMode ? 'text-gray-400' : 'text-white/60'
-              }`}>
-                最終同期: {lastSyncTime.toLocaleTimeString()}
-              </div>
-            )}
           </div>
-        </div>
-        
-        <div className="text-center mb-8">
-          <h1 className={`text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg ${
-            darkMode ? 'text-white' : 'text-white'
-          }`}>
-            🎯 やることリスト 🎯
-          </h1>
           <p className={`text-xl font-medium ${
             darkMode ? 'text-gray-300' : 'text-white/90'
           }`}>
