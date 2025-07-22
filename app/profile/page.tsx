@@ -6,9 +6,10 @@ import Image from "next/image";
 import { 
   FaUser, FaArrowLeft, FaEdit, FaSave, FaTimes, FaCamera, 
   FaKey, FaTrash, FaExclamationTriangle, FaCheck, FaSpinner,
-  FaEye, FaEyeSlash, FaSignOutAlt
+  FaEye, FaEyeSlash, FaSignOutAlt, FaEnvelope
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
+import StatsDashboard from "@/components/StatsDashboard";
 
 type Profile = {
   id: string;
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showEmailChange, setShowEmailChange] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
@@ -50,8 +52,16 @@ export default function ProfilePage() {
     confirm: false
   });
   
+  // Email change state
+  const [emailData, setEmailData] = useState({
+    new_email: ''
+  });
+  
   // Delete account state
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  
+  // Dark mode detection (simplified - could be enhanced with context)
+  const [darkMode, setDarkMode] = useState(false);
   
   const createProfile = useCallback(async () => {
     if (!user) return;
@@ -122,6 +132,18 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [user, fetchProfile]);
+  
+  // Load dark mode from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('todo-app-dark-mode');
+      if (stored) {
+        setDarkMode(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load dark mode setting:', error);
+    }
+  }, []);
   
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -316,6 +338,84 @@ export default function ProfilePage() {
     }
   };
   
+  const handleEmailChange = async () => {
+    if (!user) return;
+    
+    // バリデーション
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailData.new_email)) {
+      showMessage('error', '有効なメールアドレスを入力してください');
+      return;
+    }
+    
+    if (emailData.new_email === user.email) {
+      showMessage('error', '現在のメールアドレスと同じです');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // まず現在のセッションを確認
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        showMessage('error', 'セッションが無効です。再ログインしてください');
+        setLoading(false);
+        return;
+      }
+      
+      // メールアドレス変更を実行（確認メールが送信される）
+      const { data, error } = await supabase.auth.updateUser({
+        email: emailData.new_email
+      });
+      
+      if (error) {
+        console.error('Email update error:', error);
+        
+        // 具体的なエラーメッセージを表示
+        let errorMessage = 'メールアドレスの変更に失敗しました';
+        
+        if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'メール確認が完了していません';
+        } else if (error.message.includes('already registered')) {
+          errorMessage = 'このメールアドレスは既に使用されています';
+        } else if (error.message.includes('invalid email')) {
+          errorMessage = '無効なメールアドレス形式です';
+        } else if (error.message.includes('email confirmation')) {
+          errorMessage = 'メール確認プロセスでエラーが発生しました';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+        
+        showMessage('error', errorMessage);
+        setLoading(false);
+        return;
+      }
+      
+      // 成功した場合
+      if (data) {
+        console.log('Email update requested:', data);
+        
+        // フォームをリセット
+        setEmailData({ new_email: '' });
+        setShowEmailChange(false);
+        
+        // 成功メッセージを表示
+        showMessage('success', '確認メールを送信しました。メールの指示に従って変更を完了してください');
+      } else {
+        showMessage('error', 'メールアドレス変更の要求に失敗しました');
+      }
+      
+    } catch (err: unknown) {
+      console.error('Email change error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'メールアドレスの変更に失敗しました';
+      showMessage('error', `予期しないエラー: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const handleDeleteAccount = async () => {
     if (!user || deleteConfirmation !== 'DELETE') return;
     
@@ -497,7 +597,7 @@ export default function ProfilePage() {
           </div>
         )}
         
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-1 xl:grid-cols-3">
           {/* Avatar Section */}
           <div className="lg:col-span-1">
             <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center">
@@ -544,7 +644,7 @@ export default function ProfilePage() {
           </div>
           
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="xl:col-span-2 space-y-6">
             {/* Profile Info */}
             <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
@@ -615,6 +715,63 @@ export default function ProfilePage() {
               <h2 className="text-2xl font-bold text-white mb-6">セキュリティ設定</h2>
               
               <div className="space-y-4">
+                {/* Email Change */}
+                <div>
+                  <button
+                    onClick={() => setShowEmailChange(!showEmailChange)}
+                    className="w-full flex items-center justify-between bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-xl p-4 text-white transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FaEnvelope className="text-blue-400" />
+                      <span className="font-medium">メールアドレス変更</span>
+                    </div>
+                    <FaEdit className="text-blue-400" />
+                  </button>
+                  
+                  {showEmailChange && (
+                    <div className="mt-4 space-y-4 bg-white/10 rounded-xl p-4">
+                      <div className="text-white/60 text-sm mb-3">
+                        <p>現在のメールアドレス: <span className="font-mono text-white">{user?.email}</span></p>
+                      </div>
+                      
+                      <div>
+                        <input
+                          type="email"
+                          value={emailData.new_email}
+                          onChange={(e) => setEmailData(prev => ({ ...prev, new_email: e.target.value }))}
+                          placeholder="新しいメールアドレス"
+                          className="w-full bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                      </div>
+                      
+                      <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3 text-sm text-blue-300">
+                        <p>📧 変更後、確認メールが新しいアドレスに送信されます。</p>
+                        <p>メール内のリンクをクリックして変更を完了してください。</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleEmailChange}
+                          disabled={loading || !emailData.new_email}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {loading ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
+                          変更する
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowEmailChange(false);
+                            setEmailData({ new_email: '' });
+                          }}
+                          className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Password Change */}
                 <div>
                   <button
@@ -743,6 +900,11 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+          </div>
+          
+          {/* Statistics Dashboard - Full Width on Large Screens */}
+          <div className="xl:col-span-3">
+            <StatsDashboard darkMode={darkMode} />
           </div>
         </div>
       </div>
