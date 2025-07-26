@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
-import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaWifi, FaExclamationTriangle, FaUser, FaSignOutAlt } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRocket, FaMoon, FaSun, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaWifi, FaExclamationTriangle, FaUser, FaSignOutAlt, FaUsers } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -510,6 +511,18 @@ export default function Home() {
               
               {/* ボタン群 */}
               <div className="flex items-center gap-2">
+                <Link href="/teams">
+                  <button
+                    className={`p-2 sm:p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
+                      darkMode 
+                        ? 'bg-green-500 text-white hover:bg-green-600' 
+                        : 'bg-green-400 text-white hover:bg-green-500'
+                    }`}
+                    title="チーム"
+                  >
+                    <FaUsers size={16} />
+                  </button>
+                </Link>
                 <button
                   onClick={toggleDarkMode}
                   className={`p-2 sm:p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
@@ -648,7 +661,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getFilteredTasks().map((t, i) => (
+              {getFilteredTasks().map((t) => (
                 <div
                   key={t.id}
                   className={`group rounded-2xl p-4 border transition-all duration-300 transform hover:scale-105 hover:shadow-xl animate-fadeIn ${
@@ -668,7 +681,7 @@ export default function Home() {
                       <input
                         type="checkbox"
                         checked={t.completed}
-                        onChange={() => handleToggleTask(i)}
+                        onChange={() => handleToggleTask(t.originalIndex)}
                         className={`w-5 h-5 cursor-pointer transition-all duration-200 ${
                           darkMode ? 'accent-blue-400' : 'accent-yellow-400'
                         }`}
@@ -685,7 +698,7 @@ export default function Home() {
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <button
-                        onClick={() => handleEditStart(i)}
+                        onClick={() => handleEditStart(t.originalIndex)}
                         className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
                           darkMode 
                             ? 'text-blue-400 hover:bg-blue-400/20' 
@@ -695,7 +708,7 @@ export default function Home() {
                         <FaEdit size={14} />
                       </button>
                       <button
-                        onClick={() => handleDeleteTask(i)}
+                        onClick={() => handleDeleteTask(t.originalIndex)}
                         className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
                           darkMode 
                             ? 'text-red-400 hover:bg-red-400/20' 
@@ -706,7 +719,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  {editingIndex === i ? (
+                  {editingIndex === t.originalIndex ? (
                     <div className="space-y-3">
                       <input
                         className={`w-full rounded-lg px-3 py-2 text-lg transition-all duration-200 focus:outline-none focus:ring-2 ${
@@ -716,7 +729,7 @@ export default function Home() {
                         }`}
                         value={editText}
                         onChange={e => setEditText(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleEditSave(i); if (e.key === 'Escape') handleEditCancel(); }}
+                        onKeyDown={e => { if (e.key === 'Enter') handleEditSave(t.originalIndex); if (e.key === 'Escape') handleEditCancel(); }}
                         autoFocus
                       />
                       <select
@@ -739,7 +752,7 @@ export default function Home() {
                               ? 'bg-green-600 hover:bg-green-700 text-white' 
                               : 'bg-green-500 hover:bg-green-600 text-white'
                           }`}
-                          onClick={() => handleEditSave(i)}
+                          onClick={() => handleEditSave(t.originalIndex)}
                         >
                           <FaCheck /> 保存
                         </button>
@@ -760,7 +773,7 @@ export default function Home() {
                       className={`font-medium text-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
                         darkMode ? 'text-gray-100' : 'text-white'
                       } ${t.completed ? 'line-through opacity-60' : ''}`}
-                      onClick={() => handleEditStart(i)}
+                      onClick={() => handleEditStart(t.originalIndex)}
                       title="クリックで編集"
                     >
                       📝 {t.text}
