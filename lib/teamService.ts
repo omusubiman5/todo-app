@@ -41,7 +41,13 @@ export async function createTeam(data: CreateTeamData): Promise<Team> {
   
   if (error) {
     console.error('Team creation error:', error);
-    throw error;
+    if (error.code === 'PGRST116') {
+      throw new Error('データベースにアクセスできません。テーブルが存在するか確認してください。');
+    }
+    if (error.code === '42P01') {
+      throw new Error('teamsテーブルが存在しません。データベースセットアップが必要です。');
+    }
+    throw new Error(`チーム作成に失敗しました: ${error.message}`);
   }
 
   // 作成者をオーナーとしてメンバーに追加

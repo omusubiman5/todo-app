@@ -1,214 +1,176 @@
 "use client";
-import { useState } from 'react';
-import { inviteMember, generateInvitationLink } from '@/lib/teamService';
-import type { InviteMemberData } from '@/lib/types';
+
+import React, { useState } from 'react';
+import { FaTimes } from 'react-icons/fa';
+import { InviteMemberData } from '@/lib/types';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  teamId: string;
-  teamName: string;
-  onInvitationSent: () => void;
+  onInvite?: (data: InviteMemberData) => Promise<void>;
+  teamId?: string;
+  teamName?: string;
+  onInvitationSent?: () => Promise<void>;
+  darkMode?: boolean;
 }
 
 export default function InviteMemberModal({ 
   isOpen, 
   onClose, 
-  teamId, 
-  teamName, 
-  onInvitationSent 
+  onInvite, 
+  darkMode = false 
 }: InviteMemberModalProps) {
-  const [formData, setFormData] = useState<InviteMemberData>({
-    email: '',
-    role: 'member'
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [invitationLink, setInvitationLink] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'admin' | 'member' | 'guest'>('member');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email.trim()) {
-      setError('メールアドレスは必須です');
-      return;
-    }
+    if (!email.trim()) return;
 
-    if (!formData.email.includes('@')) {
-      setError('有効なメールアドレスを入力してください');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
+    setIsLoading(true);
     try {
-      const invitation = await inviteMember(teamId, formData);
-      const link = generateInvitationLink(invitation.token);
-      setInvitationLink(link);
-      setFormData({ email: '', role: 'member' });
-      onInvitationSent();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '招待の送信に失敗しました');
+      if (onInvite) {
+        await onInvite({ email: email.trim(), role });
+      }
+      setEmail('');
+      setRole('member');
+      onClose();
+    } catch (error) {
+      console.error('Failed to invite member:', error);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof InviteMemberData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (error) setError('');
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(invitationLink);
-      alert('招待リンクをクリップボードにコピーしました');
-    } catch (err) {
-      console.error('クリップボードへのコピーに失敗しました:', err);
+      setIsLoading(false);
     }
   };
 
   const handleClose = () => {
-    setInvitationLink('');
-    setFormData({ email: '', role: 'member' });
-    setError('');
+    setEmail('');
+    setRole('member');
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 w-full max-w-md mx-4 border border-white/20 shadow-2xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">メンバーを招待</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* オーバーレイ */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+      
+      {/* モーダル */}
+      <div className={`relative rounded-2xl shadow-2xl border max-w-md w-full mx-4 ${
+        darkMode 
+          ? 'bg-gray-800 border-gray-600' 
+          : 'bg-white border-gray-200'
+      }`}>
+        {/* ヘッダー */}
+        <div className={`flex items-center justify-between p-6 border-b ${
+          darkMode ? 'border-gray-600' : 'border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-bold ${
+            darkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            メンバーを招待
+          </h3>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-            disabled={loading}
+            className={`p-2 rounded-full transition-all duration-200 ${
+              darkMode 
+                ? 'text-gray-400 hover:bg-gray-700 hover:text-white' 
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+            }`}
           >
-            ×
+            <FaTimes size={16} />
           </button>
         </div>
 
-        <p className="text-gray-600 mb-4">
-          <strong>{teamName}</strong> に新しいメンバーを招待します
-        </p>
-
-        {!invitationLink ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                メールアドレス *
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="example@email.com"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                権限
-              </label>
-              <select
-                id="role"
-                value={formData.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
-              >
-                <option value="member">メンバー</option>
-                <option value="admin">管理者</option>
-                <option value="guest">ゲスト</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.role === 'admin' && '管理者はメンバーの追加・削除ができます'}
-                {formData.role === 'member' && 'メンバーはタスクの作成・編集ができます'}
-                {formData.role === 'guest' && 'ゲストは閲覧のみ可能です'}
-              </p>
-            </div>
-
-            {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                disabled={loading}
-              >
-                キャンセル
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                disabled={loading}
-              >
-                {loading ? '招待中...' : '招待を送信'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-md p-4">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-green-800 font-medium">招待が作成されました</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                招待リンク
-              </label>
-              <div className="flex">
-                <input
-                  type="text"
-                  value={invitationLink}
-                  readOnly
-                  className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 bg-gray-50 text-sm"
-                />
-                <button
-                  onClick={copyToClipboard}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-r-md hover:bg-gray-700 text-sm"
-                >
-                  コピー
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                このリンクは7日間有効です
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => setInvitationLink('')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                別のメンバーを招待
-              </button>
-              <button
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                完了
-              </button>
-            </div>
+        {/* フォーム */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label 
+              htmlFor="email" 
+              className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}
+            >
+              メールアドレス
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
+              className={`w-full px-3 py-2 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500'
+              }`}
+              required
+            />
           </div>
-        )}
+
+          <div>
+            <label 
+              htmlFor="role" 
+              className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}
+            >
+              役割
+            </label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'admin' | 'member' | 'guest')}
+              className={`w-full px-3 py-2 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+              }`}
+            >
+              <option value="guest">ゲスト</option>
+              <option value="member">メンバー</option>
+              <option value="admin">管理者</option>
+            </select>
+            <p className={`text-xs mt-1 ${
+              darkMode ? 'text-gray-500' : 'text-gray-500'
+            }`}>
+              {role === 'admin' && '管理者：メンバー管理とチーム設定の変更が可能'}
+              {role === 'member' && 'メンバー：タスクの作成・編集が可能'}
+              {role === 'guest' && 'ゲスト：タスクの閲覧とコメントのみ可能'}
+            </p>
+          </div>
+
+          {/* ボタン */}
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                darkMode 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={!email.trim() || isLoading}
+              className={`px-6 py-2 rounded-lg font-bold text-white transition-all duration-200 ${
+                !email.trim() || isLoading
+                  ? (darkMode ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-400 cursor-not-allowed')
+                  : (darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600')
+              }`}
+            >
+              {isLoading ? '招待中...' : '招待を送信'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
-} 
+}

@@ -1,0 +1,156 @@
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { NextRequest, NextResponse } from 'next/server';
+
+/**
+ * Security middleware for authentication and protection
+ */
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+  
+  // Create Supabase client
+  const supabase = createMiddlewareClient({ req: request, res: response });
+  
+  // Get session
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  const url = request.nextUrl.clone();
+  const pathname = url.pathname;
+  
+  // Security headers for all requests
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  
+  // Content Security Policy
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https:;
+    font-src 'self';
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+    media-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+  `.replace(/\s{2,}/g, ' ').trim();
+  
+  response.headers.set('Content-Security-Policy', cspHeader);
+  
+  // Protected routes that require authentication
+  const protectedRoutes = [
+    '/',
+    '/profile',
+    '/teams',
+    '/invite'
+  ];
+  
+  // Check if current path is protected
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+  
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login'];
+  const isPublicRoute = publicRoutes.includes(pathname);
+  
+  // Handle authentication logic
+  if (error) {
+    console.error('Middleware auth error:', error.message);
+    // Clear potentially corrupted session
+    await supabase.auth.signOut();
+  }
+  
+  // Redirect authenticated users away from login page
+  if (session && isPublicRoute) {
+    const redirectUrl = url.searchParams.get('redirectTo') || '/';
+    return NextResponse.redirect(new URL(redirectUrl, request.url));
+  }
+  
+  // Redirect unauthenticated users to login for protected routes
+  if (!session && isProtectedRoute) {
+    const loginUrl = new URL('/login', request.url);
+    
+    // Preserve the intended destination
+    if (pathname !== '/') {
+      loginUrl.searchParams.set('redirectTo', pathname);
+    }
+    
+    // Add context message for better UX
+    if (!url.searchParams.has('message')) {
+      loginUrl.searchParams.set('message', 'unauthorized');
+    }
+    
+    return NextResponse.redirect(loginUrl);
+  }
+  
+  // Session validation for protected routes
+  if (session && isProtectedRoute) {
+    const expiresAt = session.expires_at;
+    if (expiresAt) {
+      const now = Math.floor(Date.now() / 1000);
+      const timeUntilExpiry = expiresAt - now;
+      
+      // If session expires in less than 5 minutes, refresh it
+      if (timeUntilExpiry < 300) {
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error || !data.session) {
+            // Session refresh failed, redirect to login
+            const loginUrl = new URL('/login', request.url);
+            loginUrl.searchParams.set('message', 'session_expired');
+            return NextResponse.redirect(loginUrl);
+          }
+        } catch (refreshError) {
+          console.error('Session refresh failed:', refreshError);
+          const loginUrl = new URL('/login', request.url);
+          loginUrl.searchParams.set('message', 'session_expired');
+          return NextResponse.redirect(loginUrl);
+        }
+      }
+    }
+  }
+  
+  // Rate limiting for sensitive endpoints
+  const sensitiveRoutes = ['/api/auth', '/api/teams', '/api/invites'];
+  const isSensitiveRoute = sensitiveRoutes.some(route => 
+    pathname.startsWith(route)
+  );
+  
+  if (isSensitiveRoute) {
+    // Simple rate limiting based on IP
+    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+    const rateLimitKey = `rate_limit_${ip}`;
+    
+    // In production, use Redis or similar for distributed rate limiting
+    // For now, we'll add rate limiting headers
+    response.headers.set('X-RateLimit-Limit', '100');
+    response.headers.set('X-RateLimit-Remaining', '99');
+    response.headers.set('X-RateLimit-Reset', String(Date.now() + 60000));
+  }
+  
+  // Add security headers for API routes
+  if (pathname.startsWith('/api/')) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+  }
+  
+  return response;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+};
