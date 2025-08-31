@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   FaUser, FaArrowLeft, FaEdit, FaSave, FaTimes, FaCamera, 
-  FaKey, FaTrash, FaExclamationTriangle, FaCheck, FaSpinner,
-  FaEye, FaEyeSlash, FaSignOutAlt, FaEnvelope
+  FaTrash, FaExclamationTriangle, FaCheck, FaSpinner,
+  FaSignOutAlt, FaEnvelope
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
 import StatsDashboard from "@/components/StatsDashboard";
@@ -29,7 +29,6 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -38,18 +37,6 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState({
     display_name: '',
     bio: ''
-  });
-  
-  // Password change state
-  const [passwordData, setPasswordData] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: ''
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
   });
   
   // Email change state
@@ -251,88 +238,6 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Update error:', err);
       showMessage('error', 'プロフィールの更新に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handlePasswordChange = async () => {
-    if (!user) return;
-    
-    // Validation
-    if (passwordData.new_password !== passwordData.confirm_password) {
-      showMessage('error', '新しいパスワードが一致しません');
-      return;
-    }
-    
-    if (passwordData.new_password.length < 6) {
-      showMessage('error', 'パスワードは6文字以上で入力してください');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // まず現在のセッションを確認
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        showMessage('error', 'セッションが無効です。再ログインしてください');
-        setLoading(false);
-        return;
-      }
-      
-      // パスワード更新を実行
-      const { data, error } = await supabase.auth.updateUser({
-        password: passwordData.new_password
-      });
-      
-      if (error) {
-        console.error('Password update error:', error);
-        
-        // 具体的なエラーメッセージを表示
-        let errorMessage = 'パスワードの変更に失敗しました';
-        
-        if (error.message.includes('New password should be different')) {
-          errorMessage = '新しいパスワードは現在のパスワードと異なるものを設定してください';
-        } else if (error.message.includes('Password should be at least')) {
-          errorMessage = 'パスワードは6文字以上で設定してください';
-        } else if (error.message.includes('email confirmation')) {
-          errorMessage = 'パスワード変更にはメール確認が必要です。メールを確認してください';
-        } else if (error.message.includes('weak')) {
-          errorMessage = 'より強力なパスワードを設定してください';
-        } else if (error.message.includes('same')) {
-          errorMessage = '現在のパスワードと同じパスワードは設定できません';
-        } else {
-          errorMessage = `エラー: ${error.message}`;
-        }
-        
-        showMessage('error', errorMessage);
-        setLoading(false);
-        return;
-      }
-      
-      // 成功した場合
-      if (data && data.user) {
-        console.log('Password updated successfully:', data);
-        
-        // フォームをリセット
-        setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
-        setShowPasswordChange(false);
-        
-        // 成功メッセージを表示
-        showMessage('success', 'パスワード変更が完了しました');
-        
-        // パスワード表示状態もリセット
-        setShowPasswords({ current: false, new: false, confirm: false });
-      } else {
-        showMessage('error', 'パスワード変更に失敗しました（不明なエラー）');
-      }
-      
-    } catch (err: unknown) {
-      console.error('Password change error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'パスワードの変更に失敗しました';
-      showMessage('error', `予期しないエラー: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -708,196 +613,118 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
-            </div>
-            
-            {/* Security Settings */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">セキュリティ設定</h2>
               
-              <div className="space-y-4">
-                {/* Email Change */}
-                <div>
-                  <button
-                    onClick={() => setShowEmailChange(!showEmailChange)}
-                    className="w-full flex items-center justify-between bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-xl p-4 text-white transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FaEnvelope className="text-blue-400" />
-                      <span className="font-medium">メールアドレス変更</span>
-                    </div>
-                    <FaEdit className="text-blue-400" />
-                  </button>
-                  
-                  {showEmailChange && (
-                    <div className="mt-4 space-y-4 bg-white/10 rounded-xl p-4">
-                      <div className="text-white/60 text-sm mb-3">
-                        <p>現在のメールアドレス: <span className="font-mono text-white">{user?.email}</span></p>
-                      </div>
-                      
-                      <div>
-                        <input
-                          type="email"
-                          value={emailData.new_email}
-                          onChange={(e) => setEmailData(prev => ({ ...prev, new_email: e.target.value }))}
-                          placeholder="新しいメールアドレス"
-                          className="w-full bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
-                      </div>
-                      
-                      <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3 text-sm text-blue-300">
-                        <p>📧 変更後、確認メールが新しいアドレスに送信されます。</p>
-                        <p>メール内のリンクをクリックして変更を完了してください。</p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleEmailChange}
-                          disabled={loading || !emailData.new_email}
-                          className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {loading ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
-                          変更する
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowEmailChange(false);
-                            setEmailData({ new_email: '' });
-                          }}
-                          className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
-                        >
-                          キャンセル
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Password Change */}
-                <div>
-                  <button
-                    onClick={() => setShowPasswordChange(!showPasswordChange)}
-                    className="w-full flex items-center justify-between bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-xl p-4 text-white transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FaKey className="text-yellow-400" />
-                      <span className="font-medium">パスワード変更</span>
-                    </div>
-                    <FaEdit className="text-yellow-400" />
-                  </button>
-                  
-                  {showPasswordChange && (
-                    <div className="mt-4 space-y-4 bg-white/10 rounded-xl p-4">
-                      <div className="relative">
-                        <input
-                          type={showPasswords.new ? 'text' : 'password'}
-                          value={passwordData.new_password}
-                          onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
-                          placeholder="新しいパスワード"
-                          className="w-full bg-white/20 border border-white/30 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
-                        >
-                          {showPasswords.new ? <FaEyeSlash /> : <FaEye />}
-                        </button>
-                      </div>
-                      
-                      <div className="relative">
-                        <input
-                          type={showPasswords.confirm ? 'text' : 'password'}
-                          value={passwordData.confirm_password}
-                          onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
-                          placeholder="新しいパスワード（確認）"
-                          className="w-full bg-white/20 border border-white/30 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
-                        >
-                          {showPasswords.confirm ? <FaEyeSlash /> : <FaEye />}
-                        </button>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handlePasswordChange}
-                          disabled={loading || !passwordData.new_password || !passwordData.confirm_password}
-                          className="flex-1 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 disabled:opacity-50"
-                        >
-                          {loading ? <FaSpinner className="animate-spin" /> : '変更する'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowPasswordChange(false);
-                            setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
-                          }}
-                          className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
-                        >
-                          キャンセル
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              {/* Email Change - 基本情報に統合 */}
+              <div className="mt-6 pt-6 border-t border-white/20">
+                <button
+                  onClick={() => setShowEmailChange(!showEmailChange)}
+                  className="w-full flex items-center justify-between bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-xl p-4 text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-3">
+                    <FaEnvelope className="text-blue-400" />
+                    <span className="font-medium">メールアドレス変更</span>
+                  </div>
+                  <FaEdit className="text-blue-400" />
+                </button>
                 
-                {/* Delete Account */}
-                <div>
-                  <button
-                    onClick={() => setShowDeleteAccount(!showDeleteAccount)}
-                    className="w-full flex items-center justify-between bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 rounded-xl p-4 text-white transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FaTrash className="text-red-400" />
-                      <span className="font-medium">アカウント削除</span>
+                {showEmailChange && (
+                  <div className="mt-4 space-y-4 bg-white/10 rounded-xl p-4">
+                    <div className="text-white/60 text-sm mb-3">
+                      <p>現在のメールアドレス: <span className="font-mono text-white">{user?.email}</span></p>
                     </div>
-                    <FaExclamationTriangle className="text-red-400" />
-                  </button>
-                  
-                  {showDeleteAccount && (
-                    <div className="mt-4 space-y-4 bg-red-500/10 border border-red-400/30 rounded-xl p-4">
-                      <div className="text-red-300">
-                        <p className="font-bold mb-2">⚠️ 危険な操作です</p>
-                        <p className="text-sm mb-4">
-                          アカウントを削除すると、全てのデータが永久に失われます。この操作は取り消せません。
-                        </p>
-                        <p className="text-sm mb-4">
-                          削除を続行するには、下のフィールドに「DELETE」と入力してください。
-                        </p>
-                      </div>
-                      
+                    
+                    <div>
                       <input
-                        type="text"
-                        value={deleteConfirmation}
-                        onChange={(e) => setDeleteConfirmation(e.target.value)}
-                        placeholder="DELETE と入力してください"
-                        className="w-full bg-white/20 border border-red-400/30 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-red-400"
+                        type="email"
+                        value={emailData.new_email}
+                        onChange={(e) => setEmailData(prev => ({ ...prev, new_email: e.target.value }))}
+                        placeholder="新しいメールアドレス"
+                        className="w-full bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
-                      
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleDeleteAccount}
-                          disabled={loading || deleteConfirmation !== 'DELETE'}
-                          className="flex-1 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl text-white font-bold transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {loading ? <FaSpinner className="animate-spin" /> : <FaTrash />}
-                          アカウントを削除する
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowDeleteAccount(false);
-                            setDeleteConfirmation('');
-                          }}
-                          className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
-                        >
-                          キャンセル
-                        </button>
-                      </div>
                     </div>
-                  )}
-                </div>
+                    
+                    <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3 text-sm text-blue-300">
+                      <p>📧 変更後、確認メールが新しいアドレスに送信されます。</p>
+                      <p>メール内のリンクをクリックして変更を完了してください。</p>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEmailChange}
+                        disabled={loading || !emailData.new_email}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-medium transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {loading ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
+                        変更する
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowEmailChange(false);
+                          setEmailData({ new_email: '' });
+                        }}
+                        className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Account Delete - 基本情報に統合 */}
+              <div className="mt-6 pt-6 border-t border-white/20">
+                <button
+                  onClick={() => setShowDeleteAccount(!showDeleteAccount)}
+                  className="w-full flex items-center justify-between bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 rounded-xl p-4 text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-3">
+                    <FaTrash className="text-red-400" />
+                    <span className="font-medium">アカウント削除</span>
+                  </div>
+                  <FaExclamationTriangle className="text-red-400" />
+                </button>
+                
+                {showDeleteAccount && (
+                  <div className="mt-4 space-y-4 bg-red-500/10 border border-red-400/30 rounded-xl p-4">
+                    <div className="text-red-300">
+                      <p className="font-bold mb-2">⚠️ 危険な操作です</p>
+                      <p className="text-sm mb-4">
+                        アカウントを削除すると、全てのデータが永久に失われます。この操作は取り消せません。
+                      </p>
+                      <p className="text-sm mb-4">
+                        削除を続行するには、下のフィールドに「DELETE」と入力してください。
+                      </p>
+                    </div>
+                    
+                    <input
+                      type="text"
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      placeholder="DELETE と入力してください"
+                      className="w-full bg-white/20 border border-red-400/30 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-red-400"
+                    />
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={loading || deleteConfirmation !== 'DELETE'}
+                        className="flex-1 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl text-white font-bold transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {loading ? <FaSpinner className="animate-spin" /> : <FaTrash />}
+                        アカウントを削除する
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDeleteAccount(false);
+                          setDeleteConfirmation('');
+                        }}
+                        className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-all duration-300"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

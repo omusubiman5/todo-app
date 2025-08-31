@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FaArrowLeft, FaUserPlus } from 'react-icons/fa';
 import { acceptInvitation } from '@/lib/teamService';
@@ -15,7 +15,7 @@ export default function InvitePage() {
 
   const token = params.token as string;
 
-  const handleAcceptInvitation = async () => {
+  const handleAcceptInvitation = useCallback(async () => {
     if (!token) return;
 
     setLoading(true);
@@ -37,7 +37,7 @@ export default function InvitePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, router]);
 
   useEffect(() => {
     if (!authLoading && !user) {

@@ -10,7 +10,6 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [message, setMessage] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<AuthError | null>(null);
 
   useEffect(() => {
     // URLパラメータからメッセージを取得

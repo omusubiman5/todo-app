@@ -15,6 +15,10 @@ export default function WorkspaceSwitcher({ darkMode = false }: WorkspaceSwitche
   const [isOpen, setIsOpen] = useState(false);
 
   const handleWorkspaceSelect = (workspace: WorkspaceContext) => {
+    console.log('🎯🎯🎯 WorkspaceSwitcher.handleWorkspaceSelect CALLED!:', {
+      workspace,
+      timestamp: new Date().toISOString()
+    });
     switchWorkspace(workspace);
     setIsOpen(false);
   };

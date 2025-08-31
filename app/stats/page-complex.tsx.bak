@@ -1,0 +1,496 @@
+'use client'
+
+import React, { useState, useMemo } from 'react'
+import Link from 'next/link'
+import { useTaskStatistics } from '@/hooks/useTaskStatistics'
+import { useFilteredTasks } from '@/hooks/useFilteredTasks'
+import { useCleanupTasks } from '@/hooks/useCleanupTasks'
+import { useWorkspace } from '@/components/WorkspaceProvider'
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, Legend
+} from 'recharts'
+import {
+  FiTarget, FiCheckCircle, FiClock, FiAlertTriangle, FiTrendingUp,
+  FiCalendar, FiUsers, FiActivity, FiTrash2, FiRefreshCw, FiEye, FiArrowLeft
+} from 'react-icons/fi'
+
+interface StatCardProps {
+  title: string
+  value: string | number
+  icon: React.ReactNode
+  description?: string
+  trend?: {
+    value: number
+    isPositive: boolean
+  }
+  color?: string
+}
+
+const StatCard: React.FC<StatCardProps> = ({ 
+  title, value, icon, description, trend, color = 'blue' 
+}) => (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between mb-4">
+      <div className={`w-12 h-12 rounded-lg bg-${color}-50 flex items-center justify-center text-${color}-600`}>
+        {icon}
+      </div>
+      {trend && (
+        <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+          trend.isPositive 
+            ? 'bg-green-50 text-green-700' 
+            : 'bg-red-50 text-red-700'
+        }`}>
+          <FiTrendingUp className={`w-3 h-3 ${trend.isPositive ? '' : 'rotate-180'}`} />
+          <span>{trend.isPositive ? '+' : ''}{trend.value}%</span>
+        </div>
+      )}
+    </div>
+    <div className="space-y-1">
+      <h3 className="text-gray-600 text-sm font-medium">{title}</h3>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      {description && (
+        <p className="text-gray-500 text-xs">{description}</p>
+      )}
+    </div>
+  </div>
+)
+
+const LoadingCard = () => (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 animate-pulse">
+    <div className="flex items-center justify-between mb-4">
+      <div className="w-12 h-12 rounded-lg bg-gray-200"></div>
+      <div className="w-16 h-6 rounded-full bg-gray-200"></div>
+    </div>
+    <div className="space-y-2">
+      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+      <div className="h-3 bg-gray-200 rounded w-full"></div>
+    </div>
+  </div>
+)
+
+const PRIORITY_COLORS = {
+  '高': '#ef4444',
+  '中': '#f59e0b', 
+  '低': '#10b981'
+}
+
+export default function StatsPage() {
+  const { currentWorkspace } = useWorkspace()
+  const [cleanupDays, setCleanupDays] = useState(30)
+  const [showCleanupPreview, setShowCleanupPreview] = useState(false)
+  
+  const { statistics, loading: statsLoading, error: statsError } = useTaskStatistics()
+  const { tasks, loading: tasksLoading, error: tasksError } = useFilteredTasks({ 
+    includeCompleted: true, 
+    limit: 1000 
+  })
+  const { previewCleanup, executeCleanup, loading: cleanupLoading } = useCleanupTasks()
+
+  const [cleanupPreview, setCleanupPreview] = useState<{ tasksToDelete: number; oldestTask: string; criteria: string; } | null>(null)
+
+  const processedData = useMemo(() => {
+    if (!statistics || statistics.length === 0 || !tasks) return null
+
+    const userStats = statistics[0]
+
+    // Priority distribution data - 固定データでちらつき防止
+    const priorityData = [
+      { name: '高優先度', value: userStats.priority_high || 0, color: PRIORITY_COLORS['高'] },
+      { name: '中優先度', value: userStats.priority_medium || 0, color: PRIORITY_COLORS['中'] },
+      { name: '低優先度', value: userStats.priority_low || 0, color: PRIORITY_COLORS['低'] }
+    ]
+
+    // Activity timeline (last 7 days)
+    const now = new Date()
+    const activityData = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(now)
+      date.setDate(date.getDate() - (6 - i))
+      
+      const dayTasks = tasks.filter(task => {
+        const taskDate = new Date(task.created_at)
+        return taskDate.toDateString() === date.toDateString()
+      })
+
+      const completedTasks = tasks.filter(task => {
+        const taskDate = new Date(task.updated_at)
+        return task.completed && taskDate.toDateString() === date.toDateString()
+      })
+
+      return {
+        date: date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+        created: dayTasks.length,
+        completed: completedTasks.length,
+        day: date.toLocaleDateString('ja-JP', { weekday: 'short' })
+      }
+    })
+
+    // Completion rate over time (last 30 days)
+    const completionData = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(now)
+      date.setDate(date.getDate() - (29 - i))
+      
+      const dayCompleted = tasks.filter(task => {
+        const taskDate = new Date(task.updated_at)
+        return task.completed && taskDate.toDateString() === date.toDateString()
+      }).length
+
+      return {
+        date: date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+        completed: dayCompleted
+      }
+    })
+
+    return {
+      userStats,
+      priorityData,
+      activityData,
+      completionData
+    }
+  }, [statistics, tasks])
+
+  const handleCleanupPreview = async () => {
+    const result = await previewCleanup(cleanupDays)
+    setCleanupPreview(result)
+    setShowCleanupPreview(true)
+  }
+
+  const handleCleanupExecute = async () => {
+    const result = await executeCleanup(cleanupDays)
+    if (result?.success) {
+      setCleanupPreview(result)
+      setShowCleanupPreview(false)
+    }
+  }
+
+  if (statsLoading || tasksLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-96 animate-pulse"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <LoadingCard key={i} />
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-6 h-80 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
+                <div className="h-64 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (statsError || tasksError) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* 戻るボタン */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.push('/home')}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              ホームに戻る
+            </button>
+            <div className="w-[120px]"></div>
+          </div>
+          <div className="bg-white rounded-xl p-8 text-center">
+            <FiAlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">データの読み込みに失敗しました</h2>
+            <p className="text-gray-600 mb-4">{statsError || tasksError}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              再読み込み
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!processedData) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* 戻るボタン */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.push('/home')}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              ホームに戻る
+            </button>
+            <div className="w-[120px]"></div>
+          </div>
+          <div className="bg-white rounded-xl p-8 text-center">
+            <FiActivity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">統計データがありません</h2>
+            <p className="text-gray-600">タスクを作成して統計を確認しましょう</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const { userStats, priorityData, activityData, completionData } = processedData
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* ヘッダー（戻るボタン付き） */}
+        <div className="flex items-center justify-between mb-8">
+          <Link 
+            href="/home"
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border"
+          >
+            <FiArrowLeft className="w-4 h-4" />
+            ホームに戻る
+          </Link>
+          <div className="flex-1 text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {currentWorkspace.type === 'team' ? 'チーム統計ダッシュボード' : 'タスク統計ダッシュボード'}
+            </h1>
+            <p className="text-gray-600">
+              {currentWorkspace.type === 'team' 
+                ? `${currentWorkspace.team_name || 'チーム'}のタスク管理状況を総合的に分析します`
+                : 'あなたのタスク管理状況を総合的に分析します'
+              }
+            </p>
+          </div>
+          <div className="w-[120px]"></div> {/* スペーサー */}
+        </div>
+
+        {/* Workspace Info */}
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {currentWorkspace.type === 'team' ? `🏢 ${currentWorkspace.team_name} 統計` : '📊 個人統計'}
+          </h2>
+          <p className="text-gray-600">
+            {currentWorkspace.type === 'team' ? 'チームの生産性を確認しましょう' : '個人の生産性を確認しましょう'}
+          </p>
+        </div>
+
+        {/* Key Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="完了率"
+            value={`${Math.round(userStats.completion_rate)}%`}
+            icon={<FiTarget className="w-6 h-6" />}
+            description={`${userStats.completed_tasks}/${userStats.total_tasks} タスク完了`}
+            color="blue"
+          />
+          
+          <StatCard
+            title="総タスク数"
+            value={userStats.total_tasks}
+            icon={<FiCheckCircle className="w-6 h-6" />}
+            description={`${userStats.incomplete_tasks} 件未完了`}
+            color="green"
+          />
+          
+          <StatCard
+            title="平均完了日数"
+            value={`${Math.round(userStats.avg_completion_days)}日`}
+            icon={<FiClock className="w-6 h-6" />}
+            description="タスク作成から完了まで"
+            color="yellow"
+          />
+          
+          <StatCard
+            title="アクティブ期間"
+            value={`${userStats.days_since_first_task}日`}
+            icon={<FiCalendar className="w-6 h-6" />}
+            description="初回タスクから現在まで"
+            color="purple"
+          />
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Priority Distribution */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">優先度別タスク分布</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={priorityData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {priorityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">7日間のアクティビティ</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="created" fill="#3b82f6" name="作成" />
+                  <Bar dataKey="completed" fill="#10b981" name="完了" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Completion Trend */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">30日間の完了トレンド</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={completionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area 
+                    type="monotone" 
+                    dataKey="completed" 
+                    stroke="#3b82f6" 
+                    fill="#3b82f6" 
+                    fillOpacity={0.3} 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Cleanup Tools */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">クリーンアップツール</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  完了から何日経過したタスクを削除しますか？
+                </label>
+                <select 
+                  value={cleanupDays}
+                  onChange={(e) => setCleanupDays(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value={7}>7日</option>
+                  <option value={14}>14日</option>
+                  <option value={30}>30日</option>
+                  <option value={60}>60日</option>
+                  <option value={90}>90日</option>
+                </select>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleCleanupPreview}
+                  disabled={cleanupLoading}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <FiEye className="w-4 h-4" />
+                  <span>プレビュー</span>
+                </button>
+                
+                <button
+                  onClick={handleCleanupExecute}
+                  disabled={cleanupLoading || !cleanupPreview}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  <FiTrash2 className="w-4 h-4" />
+                  <span>実行</span>
+                </button>
+              </div>
+
+              {cleanupLoading && (
+                <div className="flex items-center justify-center space-x-2 text-blue-600">
+                  <FiRefreshCw className="w-4 h-4 animate-spin" />
+                  <span>処理中...</span>
+                </div>
+              )}
+
+              {cleanupPreview && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    {showCleanupPreview ? 'プレビュー結果' : '実行結果'}
+                  </h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>対象タスク: {cleanupPreview.total_found}件</p>
+                    <p>削除予定: {cleanupPreview.would_delete}件</p>
+                    {!showCleanupPreview && (
+                      <p className="text-green-600 font-medium">
+                        実際に削除: {cleanupPreview.actually_deleted}件
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* User Information */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">ユーザー情報</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FiUsers className="w-8 h-8 text-blue-600" />
+              </div>
+              <h4 className="font-medium text-gray-900">{userStats.display_name}</h4>
+              <p className="text-sm text-gray-600">ユーザー名</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FiCalendar className="w-8 h-8 text-green-600" />
+              </div>
+              <h4 className="font-medium text-gray-900">
+                {new Date(userStats.first_task_date).toLocaleDateString('ja-JP')}
+              </h4>
+              <p className="text-sm text-gray-600">初回タスク作成日</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FiActivity className="w-8 h-8 text-purple-600" />
+              </div>
+              <h4 className="font-medium text-gray-900">
+                {new Date(userStats.last_activity_date).toLocaleDateString('ja-JP')}
+              </h4>
+              <p className="text-sm text-gray-600">最終アクティビティ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

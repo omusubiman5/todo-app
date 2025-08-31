@@ -281,10 +281,12 @@ export default function TaskHistoryModal({
                               darkMode ? 'bg-gray-600' : 'bg-gray-300'
                             }`}>
                               {item.user?.user_metadata?.avatar_url ? (
-                                <img
+                                <Image
                                   src={item.user.user_metadata.avatar_url}
                                   alt="Avatar"
-                                  className="w-full h-full rounded-full object-cover"
+                                  width={24}
+                                  height={24}
+                                  className="rounded-full object-cover"
                                 />
                               ) : (
                                 <FaUser size={10} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />

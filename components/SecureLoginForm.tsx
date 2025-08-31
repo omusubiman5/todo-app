@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 import { 
   mapSupabaseError, 
@@ -9,7 +10,13 @@ import {
   logAuthEvent,
   type AuthError 
 } from '@/lib/authErrors';
-import { FaEye, FaEyeSlash, FaExclamationTriangle, FaShieldAlt, FaSpinner, FaCheckCircle } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaExclamationTriangle, FaShieldAlt, FaSpinner, FaCheckCircle, FaKey, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
+
+// hCaptchaを動的インポート（SSRを回避）
+const HCaptcha = dynamic(() => import('@hcaptcha/react-hcaptcha'), {
+  ssr: false,
+  loading: () => <div className="h-16 flex items-center justify-center text-white/60">Captcha読み込み中...</div>
+});
 
 interface SecureLoginFormProps {
   onSuccess?: () => void;
@@ -26,6 +33,10 @@ interface FormState {
   isSignUp: boolean;
   rateLimited: boolean;
   retryAfter: number;
+  showForgotPassword: boolean;
+  resetEmailSent: boolean;
+  captchaToken: string | null;
+  captchaError: boolean;
 }
 
 export default function SecureLoginForm({ 
@@ -41,7 +52,11 @@ export default function SecureLoginForm({
     error: null,
     isSignUp: false,
     rateLimited: false,
-    retryAfter: 0
+    retryAfter: 0,
+    showForgotPassword: false,
+    resetEmailSent: false,
+    captchaToken: null,
+    captchaError: false
   });
 
   const securityMonitor = AuthSecurityMonitor.getInstance();
@@ -102,6 +117,23 @@ export default function SecureLoginForm({
     // Client-side validation
     if (!validateForm()) return;
 
+    // Captcha validation (skip in development if configured)
+    const skipCaptcha = process.env.NEXT_PUBLIC_SKIP_CAPTCHA === 'true' || process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+    const captchaToken = skipCaptcha ? 'dev-bypass-token' : formState.captchaToken;
+    
+    if (!skipCaptcha && !formState.captchaToken) {
+      const captchaError: AuthError = {
+        code: 'captcha_required',
+        message: 'Captcha verification required',
+        severity: 'warning',
+        userMessage: 'セキュリティ認証が必要です。Captchaを完了してください。'
+      };
+      
+      setFormState(prev => ({ ...prev, error: captchaError }));
+      onError?.(captchaError);
+      return;
+    }
+
     // Check rate limiting
     const rateCheck = securityMonitor.checkRateLimit(formState.email);
     if (!rateCheck.allowed) {
@@ -132,6 +164,11 @@ export default function SecureLoginForm({
         userAgent: navigator.userAgent
       });
 
+      // Debug: Check Supabase configuration
+      console.log('🔍 Debug - Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('🔍 Debug - Anon Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+      console.log('🔍 Debug - Login attempt for:', formState.email);
+
       let result;
       
       if (formState.isSignUp) {
@@ -143,22 +180,34 @@ export default function SecureLoginForm({
             emailRedirectTo: `${window.location.origin}/`,
             data: {
               email_confirm: true
-            }
+            },
+            captchaToken: captchaToken
           }
         });
       } else {
         // Sign in
         result = await supabase.auth.signInWithPassword({
           email: formState.email.trim().toLowerCase(),
-          password: formState.password
+          password: formState.password,
+          options: {
+            captchaToken: captchaToken
+          }
         });
       }
 
       const { data, error } = result;
 
       if (error) {
+        // Debug: Log detailed error information
+        console.error('🚨 Supabase Auth Error Details:');
+        console.error('- Message:', error.message);
+        console.error('- Code:', error.code);
+        console.error('- Status:', error.status);
+        console.error('- Full error object:', error);
+        
         // Map and handle error securely
         const authError = mapSupabaseError(error);
+        console.log('🔄 Mapped auth error:', authError);
         
         setFormState(prev => ({ ...prev, error: authError, isLoading: false }));
         onError?.(authError);
@@ -177,7 +226,12 @@ export default function SecureLoginForm({
       }
 
       // Success
-      if (data.user) {
+      if (data.user && data.session) {
+        console.log('🎉 Login successful, setting up session persistence');
+        
+        // 🚨 セキュリティ修正: ローカルストレージ保存を無効化
+        console.log('🔒 Security: Local storage session save disabled');
+        
         // Record successful attempt (reset rate limiting)
         securityMonitor.recordSuccessfulAttempt(formState.email);
         
@@ -196,12 +250,26 @@ export default function SecureLoginForm({
           password: ''
         }));
         
-        onSuccess?.();
+        // 少し遅延してからonSuccessを呼び出し、セッション保存を確実にする
+        setTimeout(() => {
+          onSuccess?.();
+        }, 100);
       }
 
-    } catch (err) {
-      // Handle unexpected errors
+    } catch (err: unknown) {
+      // Handle unexpected errors with detailed logging
+      const error = err as Error;
+      console.error('🚨 Unexpected Error Details:');
+      console.error('- Error type:', typeof error);
+      console.error('- Error name:', error.name);
+      console.error('- Error message:', error.message);
+      console.error('- Error stack:', err.stack);
+      console.error('- Full error object:', err);
+      console.error('- Network online:', navigator.onLine);
+      
       const unexpectedError = mapSupabaseError(err);
+      console.log('🔄 Mapped unexpected error:', unexpectedError);
+      
       setFormState(prev => ({ ...prev, error: unexpectedError, isLoading: false }));
       onError?.(unexpectedError);
       
@@ -226,6 +294,99 @@ export default function SecureLoginForm({
       error: null,
       email: '',
       password: ''
+    }));
+  }, []);
+
+  const handlePasswordReset = useCallback(async () => {
+    if (!formState.email) {
+      setFormState(prev => ({
+        ...prev,
+        error: {
+          code: 'email_required',
+          message: 'Email required for password reset',
+          severity: 'warning',
+          userMessage: 'パスワードリセットにはメールアドレスの入力が必要です。'
+        }
+      }));
+      return;
+    }
+
+    const emailValidation = validateAuthInput.email(formState.email);
+    if (!emailValidation.isValid && emailValidation.error) {
+      setFormState(prev => ({ ...prev, error: emailValidation.error! }));
+      return;
+    }
+
+    setFormState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        formState.email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+          captchaToken: (process.env.NEXT_PUBLIC_SKIP_CAPTCHA === 'true' || process.env.NEXT_PUBLIC_DEV_MODE === 'true') ? 'dev-bypass-token' : (formState.captchaToken || undefined)
+        }
+      );
+
+      if (error) {
+        console.error('Password reset error:', error);
+        const authError = mapSupabaseError(error);
+        setFormState(prev => ({ ...prev, error: authError, isLoading: false }));
+        return;
+      }
+
+      setFormState(prev => ({
+        ...prev,
+        resetEmailSent: true,
+        isLoading: false,
+        error: null
+      }));
+
+    } catch (err: unknown) {
+      console.error('Password reset error:', err);
+      const unexpectedError = mapSupabaseError(err);
+      setFormState(prev => ({ ...prev, error: unexpectedError, isLoading: false }));
+    }
+  }, [formState.email, formState.captchaToken]);
+
+  const toggleForgotPassword = useCallback(() => {
+    setFormState(prev => ({
+      ...prev,
+      showForgotPassword: !prev.showForgotPassword,
+      error: null,
+      resetEmailSent: false
+    }));
+  }, []);
+
+  // hCaptcha handlers
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setFormState(prev => ({
+      ...prev,
+      captchaToken: token,
+      captchaError: false,
+      error: null
+    }));
+  }, []);
+
+  const handleCaptchaExpire = useCallback(() => {
+    setFormState(prev => ({
+      ...prev,
+      captchaToken: null,
+      captchaError: false
+    }));
+  }, []);
+
+  const handleCaptchaError = useCallback(() => {
+    setFormState(prev => ({
+      ...prev,
+      captchaToken: null,
+      captchaError: true,
+      error: {
+        code: 'captcha_error',
+        message: 'Captcha verification failed',
+        severity: 'error',
+        userMessage: 'Captcha認証に失敗しました。再度お試しください。'
+      }
     }));
   }, []);
 
@@ -338,6 +499,19 @@ export default function SecureLoginForm({
             )}
           </div>
 
+          {/* hCaptcha */}
+          {(!process.env.NEXT_PUBLIC_SKIP_CAPTCHA || process.env.NEXT_PUBLIC_SKIP_CAPTCHA !== 'true') && (
+            <div className="flex justify-center">
+              <HCaptcha
+                sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || ''}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+                onError={handleCaptchaError}
+                theme="dark"
+              />
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -372,20 +546,99 @@ export default function SecureLoginForm({
           </button>
         </form>
 
+        {/* Forgot Password Section */}
+        {!formState.isSignUp && !formState.showForgotPassword && (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={toggleForgotPassword}
+              className="text-yellow-300 hover:text-yellow-200 underline transition-colors text-sm"
+              disabled={formState.isLoading}
+            >
+              <FaKey className="inline mr-1" />
+              パスワードを忘れた場合
+            </button>
+          </div>
+        )}
+
+        {/* Password Reset Form */}
+        {formState.showForgotPassword && (
+          <div className="mt-6 p-6 rounded-xl bg-yellow-500/10 border border-yellow-400/30">
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                type="button"
+                onClick={toggleForgotPassword}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <FaArrowLeft />
+              </button>
+              <h3 className="text-lg font-semibold text-white">パスワードリセット</h3>
+            </div>
+
+            {formState.resetEmailSent ? (
+              <div className="text-center">
+                <FaEnvelope className="text-green-400 text-3xl mx-auto mb-3" />
+                <p className="text-green-300 font-semibold mb-2">
+                  リセットメールを送信しました！
+                </p>
+                <p className="text-white/70 text-sm">
+                  {formState.email} にパスワードリセットメールを送信しました。
+                  メール内のリンクをクリックして新しいパスワードを設定してください。
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-white/70 text-sm mb-4">
+                  登録済みのメールアドレスを入力してください。パスワードリセット用のリンクを送信します。
+                </p>
+                <div className="space-y-4">
+                  <input
+                    type="email"
+                    value={formState.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="メールアドレス"
+                    className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
+                    disabled={formState.isLoading}
+                  />
+                  <button
+                    onClick={handlePasswordReset}
+                    disabled={formState.isLoading || !formState.email}
+                    className="w-full py-3 px-4 rounded-xl bg-yellow-500 text-black font-semibold hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {formState.isLoading ? (
+                      <>
+                        <FaSpinner className="animate-spin" />
+                        送信中...
+                      </>
+                    ) : (
+                      <>
+                        <FaEnvelope />
+                        リセットメールを送信
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Toggle Sign Up/Login */}
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={toggleSignUpMode}
-            className="text-blue-300 hover:text-blue-200 underline transition-colors"
-            disabled={formState.isLoading}
-          >
-            {formState.isSignUp 
-              ? 'すでにアカウントをお持ちですか？ログイン' 
-              : 'アカウントをお持ちでない方は新規登録'
-            }
-          </button>
-        </div>
+        {!formState.showForgotPassword && (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={toggleSignUpMode}
+              className="text-blue-300 hover:text-blue-200 underline transition-colors"
+              disabled={formState.isLoading}
+            >
+              {formState.isSignUp 
+                ? 'すでにアカウントをお持ちですか？ログイン' 
+                : 'アカウントをお持ちでない方は新規登録'
+              }
+            </button>
+          </div>
+        )}
 
         {/* Security Notice */}
         <div className="mt-4 text-center">

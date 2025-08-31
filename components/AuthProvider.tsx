@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { logAuthEvent } from "@/lib/authErrors";
+import { logger, devLog } from "@/lib/logger";
 import type { Session, User } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -23,10 +24,20 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [sessionExpiry, setSessionExpiry] = useState<Date | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // セッション取得まで loading=true に戻す
   const [sessionCheckInterval, setSessionCheckInterval] = useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  
+  // 強制的なタイムアウト - 5秒後に必ずloading=falseにする
+  useEffect(() => {
+    const forceTimeout = setTimeout(() => {
+      devLog('Force timeout: Setting loading to false after 5 seconds');
+      setLoading(false);
+    }, 5000);
+    
+    return () => clearTimeout(forceTimeout);
+  }, []);
 
   // Calculate session validity
   const isSessionValid = useCallback((): boolean => {
@@ -69,13 +80,36 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
   }, [session, isSessionValid, refreshSession]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const getSession = async () => {
+      devLog('Starting session initialization...');
+      
       try {
+        // セキュリティ: Supabase管理のセッションのみ使用
+        devLog('Security: Using Supabase-managed sessions only');
+        
+        // 2. Supabaseからセッション取得
+        devLog('Fetching session from Supabase...');
         const { data, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
         if (error) {
           console.error('Get session error:', error.message);
           setLoading(false);
           return;
+        }
+        
+        devLog('Session fetch result:', {
+          hasSession: !!data.session,
+          hasUser: !!data.session?.user,
+          userEmail: data.session?.user?.email,
+          expiresAt: data.session?.expires_at
+        });
+        
+        if (data.session) {
+          devLog('Session validated and ready');
         }
         
         setSession(data.session);
@@ -86,15 +120,42 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
         }
         
         setLoading(false);
-      } catch (error) {
-        console.error('Session initialization error:', error);
-        setLoading(false);
+        devLog('Session initialization completed');
+        
+      } catch (error: unknown) {
+        console.error('Session initialization error:', error instanceof Error ? error.message : String(error));
+        
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setSessionExpiry(null);
+          setLoading(false);
+        }
       }
     };
     
+    // 強制タイムアウト（15秒）
+    const forceTimeout = setTimeout(() => {
+      if (isMounted) {
+        logger.warn('Session initialization timeout, proceeding without session');
+        setLoading(false);
+      }
+    }, 15000);
+
     getSession();
     
+    return () => {
+      isMounted = false;
+      clearTimeout(forceTimeout);
+    };
+    
+  }, []);
+    
+  // 認証状態変更の監視を別のuseEffectで管理
+  useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      devLog('Auth state change:', event, session ? 'with session' : 'without session');
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -105,6 +166,9 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
       }
       
       setLoading(false);
+      
+      // セキュリティ: セッション状態はSupabaseが管理
+      devLog('Security: Session state managed by Supabase');
       
       // Enhanced auth event logging
       if (event === 'SIGNED_IN' && session?.user) {
@@ -119,19 +183,21 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
         });
       }
       
-      // Navigation logic
+      // Navigation logic (middleware無効化中は自前で管理)
       if (!session && requireAuth && pathname !== '/login') {
+        devLog('Redirecting to login due to no session');
         router.replace("/login");
       }
       if (session && pathname === "/login") {
-        router.replace("/");
+        devLog('Redirecting to home due to active session');
+        router.replace("/home");
       }
     });
     
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [router, requireAuth, pathname, user]);
+  }, [router, requireAuth, pathname, user?.id]); // user?.id のみを依存関係に追加
 
   useEffect(() => {
     if (!loading && requireAuth && !user) {
@@ -213,19 +279,23 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
     }
   }, [session, sessionExpiry, refreshSession]);
 
+  // Session validity check
+  const currentSessionValid = isSessionValid();
+  const shouldShowChildren = !requireAuth || (requireAuth && !loading && user && currentSessionValid);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       sessionExpiry,
-      isSessionValid: isSessionValid(),
+      isSessionValid: currentSessionValid,
       loading, 
       login, 
       logout,
       refreshSession,
       checkSessionHealth
     }}>
-      {(!requireAuth || (requireAuth && !loading && user && isSessionValid())) ? children : null}
+      {shouldShowChildren ? children : null}
     </AuthContext.Provider>
   );
 }

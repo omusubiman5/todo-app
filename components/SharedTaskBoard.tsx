@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaPlus, FaTrash, FaEdit, FaCheck, FaTimes, FaSort, FaEye, FaEyeSlash, FaUser, FaComment, FaHistory } from 'react-icons/fa';
-import { SharedTask, TaskComment, TaskHistory } from '@/lib/types';
+import { SharedTask } from '@/lib/types';
 import { SharedTaskService } from '@/lib/sharedTaskService';
 import { useWorkspace } from './WorkspaceProvider';
 import { useAuth } from './AuthProvider';
@@ -45,59 +45,121 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
 
   // タスク取得
   const fetchTasks = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
+    console.log('📋 タスク取得開始:', {
+      workspace_type: currentWorkspace?.type,
+      team_id: currentWorkspace?.team_id
+    });
+    
     setIsLoading(true);
+    
     try {
+      // ワークスペース変更時は既存タスクを即座にクリア
+      setTasks([]);
+      
       const data = await SharedTaskService.getTasks(currentWorkspace, user.id);
+      
+      console.log('✅ タスク取得成功:', {
+        workspace_type: currentWorkspace.type,
+        team_name: currentWorkspace.team_name,
+        tasks_count: data.length,
+        tasks: data.map(t => ({ id: t.id, text: t.text, team_id: t.team_id }))
+      });
+      
       setTasks(data);
       setLastSyncTime(new Date());
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      console.error('❌ タスク取得エラー:', error);
+      // エラー時は空配列に設定
+      setTasks([]);
     } finally {
+      // 必ずローディング状態を解除
       setIsLoading(false);
     }
   }, [user, currentWorkspace]);
 
   // 初期読み込みとワークスペース変更時の更新
   useEffect(() => {
+    if (!user || !currentWorkspace) return;
     fetchTasks();
-  }, [fetchTasks]);
+  }, [user, currentWorkspace]); // fetchTasksではなく直接依存
 
-  // リアルタイム更新
+  // リアルタイム更新（デバウンス付き）
   useEffect(() => {
     if (!user) return;
 
+    let timeoutId: NodeJS.Timeout;
+
     const channel = SharedTaskService.subscribeToTasks(currentWorkspace, (payload) => {
       console.log('Real-time task update:', payload);
-      fetchTasks();
+      // 500msのデバウンスでAPI呼び出しを制限
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        fetchTasks();
+      }, 500);
     });
 
     return () => {
       if (channel) {
         channel.unsubscribe();
       }
+      clearTimeout(timeoutId);
     };
-  }, [user, currentWorkspace, fetchTasks]);
+  }, [currentWorkspace, user]); // fetchTasksを除去
 
   // タスク追加
   const handleAddTask = async () => {
     if (!user || task.trim() === '') return;
 
+    // 詳細なワークスペース状態ログ
+    console.log('📝 タスク作成開始 - ワークスペース詳細:', {
+      workspace: currentWorkspace,
+      workspaceType: currentWorkspace.type,
+      teamId: currentWorkspace.team_id,
+      teamName: currentWorkspace.team_name,
+      taskText: task.trim(),
+      priority,
+      user_id: user.id,
+      expectedTeamId: currentWorkspace.type === 'team' ? currentWorkspace.team_id : null
+    });
+
     try {
-      const newTask = await SharedTaskService.createTask({
+      // 作成データを事前ログ出力
+      const taskToCreate = {
         text: task.trim(),
         completed: false,
         priority,
         user_id: user.id
-      }, currentWorkspace);
+      };
+      
+      console.log('📤 SharedTaskService.createTask呼び出し:', {
+        taskData: taskToCreate,
+        workspace: currentWorkspace,
+        workspaceType: currentWorkspace.type,
+        teamId: currentWorkspace.team_id
+      });
+
+      const newTask = await SharedTaskService.createTask(taskToCreate, currentWorkspace);
+
+      console.log('✅ タスク作成成功:', {
+        id: newTask.id,
+        text: newTask.text,
+        team_id: newTask.team_id,
+        workspace_type: currentWorkspace.type,
+        expectedTeamId: currentWorkspace.type === 'team' ? currentWorkspace.team_id : null,
+        teamIdMismatch: newTask.team_id !== (currentWorkspace.type === 'team' ? currentWorkspace.team_id : null)
+      });
 
       setTasks(prev => [...prev, newTask]);
       setTask('');
       setPriority('中');
       setLastSyncTime(new Date());
     } catch (error) {
-      console.error('Failed to create task:', error);
+      console.error('❌ タスク作成エラー:', error);
     }
   };
 
@@ -112,17 +174,51 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
     }
   };
 
-  // タスク削除
-  const handleDeleteTask = async (index: number) => {
-    const taskToDelete = tasks[index];
+  // タスク削除（ID指定版に修正）
+  const handleDeleteTask = async (taskId: string) => {
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    console.log('🗑️ タスク削除開始:', { 
+      taskId, 
+      taskToDelete,
+      currentUser: user?.id,
+      currentWorkspace,
+      taskOwner: taskToDelete?.user_id,
+      taskTeamId: taskToDelete?.team_id,
+      isOwner: taskToDelete?.user_id === user?.id,
+      isPersonalTask: taskToDelete?.team_id === null,
+      isTeamTask: taskToDelete?.team_id !== null
+    });
+
+    // 権限チェック表示
+    if (taskToDelete) {
+      const isPersonal = taskToDelete.team_id === null;
+      const isOwner = taskToDelete.user_id === user?.id;
+      console.log('🔐 削除権限チェック:', {
+        taskType: isPersonal ? '個人タスク' : 'チームタスク',
+        canDelete: isPersonal ? isOwner : '要チーム権限確認',
+        ownershipMatch: isOwner
+      });
+    }
     
     try {
-      await SharedTaskService.deleteTask(taskToDelete.id);
-      setTasks(prev => prev.filter((_, i) => i !== index));
+      await SharedTaskService.deleteTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
       setEditingIndex(null);
       setLastSyncTime(new Date());
+      console.log('✅ タスク削除成功:', { taskId });
     } catch (error) {
-      console.error('Failed to delete task:', error);
+      console.error('❌ タスク削除エラー:', error);
+      console.error('エラーの詳細:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // RLS権限エラーの可能性を示唆
+      if (error.code === '42501' || error.message.includes('permission') || error.message.includes('policy')) {
+        console.error('🚫 RLS権限エラーの可能性があります。タスクの所有者または適切なチーム権限が必要です。');
+      }
     }
   };
 
@@ -205,6 +301,31 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
 
   return (
     <div className="w-full">
+      {/* チーム名表示 */}
+      {currentWorkspace.type === 'team' && currentWorkspace.team_name && (
+        <div className={`rounded-2xl p-4 mb-6 backdrop-blur-md border transition-all duration-300 ${
+          darkMode 
+            ? 'bg-blue-800/50 border-blue-700' 
+            : 'bg-blue-500/10 border-blue-400/20'
+        }`}>
+          <div className="flex items-center justify-center gap-3">
+            <div className="text-2xl">👥</div>
+            <div>
+              <h2 className={`text-xl font-bold ${
+                darkMode ? 'text-blue-300' : 'text-blue-200'
+              }`}>
+                {currentWorkspace.team_name}
+              </h2>
+              <p className={`text-sm ${
+                darkMode ? 'text-blue-400' : 'text-blue-300'
+              }`}>
+                チームタスクボード
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* タスク追加フォーム */}
       <div className={`rounded-2xl p-6 mb-8 backdrop-blur-md border transition-all duration-300 ${
         darkMode 
@@ -282,7 +403,21 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
           ? 'bg-gray-800/50 border-gray-700' 
           : 'bg-white/10 border-white/20'
       }`}>
-        {tasks.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4 animate-spin">⏳</div>
+            <p className={`text-lg font-medium mb-2 ${
+              darkMode ? 'text-gray-300' : 'text-white/80'
+            }`}>
+              読み込み中...
+            </p>
+            <p className={`text-sm ${
+              darkMode ? 'text-gray-400' : 'text-white/60'
+            }`}>
+              {currentWorkspace.type === 'team' ? `${currentWorkspace.team_name}のタスクを取得中` : '個人タスクを取得中'}
+            </p>
+          </div>
+        ) : tasks.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
             <p className={`text-lg font-medium mb-2 ${
@@ -311,7 +446,7 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
                     : t.priority === "中" 
                     ? (darkMode ? "border-yellow-500 bg-yellow-500/10" : "border-yellow-400 bg-yellow-400/20") 
                     : (darkMode ? "border-blue-500 bg-blue-500/10" : "border-blue-400 bg-blue-400/20")
-                }`}
+                } ${t.completed ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -383,7 +518,7 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
                       <FaEdit size={14} />
                     </button>
                     <button
-                      onClick={() => handleDeleteTask(t.originalIndex)}
+                      onClick={() => handleDeleteTask(t.id)}
                       className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
                         darkMode 
                           ? 'text-red-400 hover:bg-red-400/20' 
@@ -395,15 +530,28 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
                   </div>
                 </div>
 
-                {/* 担当者表示 */}
-                {t.assigned_to && t.assignee && (
-                  <div className={`mb-2 text-xs flex items-center gap-2 ${
-                    darkMode ? 'text-gray-400' : 'text-white/70'
-                  }`}>
-                    <FaUser size={10} />
-                    <span>担当: {t.assignee.user_metadata?.full_name || t.assignee.email}</span>
-                  </div>
-                )}
+                {/* チーム名と担当者表示 */}
+                <div className="mb-3 space-y-1">
+                  {/* チーム名表示 */}
+                  {currentWorkspace.type === 'team' && currentWorkspace.team_name && (
+                    <div className={`text-xs flex items-center gap-2 ${
+                      darkMode ? 'text-blue-400' : 'text-blue-300'
+                    }`}>
+                      <span className="text-xs">👥</span>
+                      <span>{currentWorkspace.team_name}</span>
+                    </div>
+                  )}
+                  
+                  {/* 担当者表示 */}
+                  {t.assigned_to && t.assignee && (
+                    <div className={`text-xs flex items-center gap-2 ${
+                      darkMode ? 'text-gray-400' : 'text-white/70'
+                    }`}>
+                      <FaUser size={10} />
+                      <span>担当: {t.assignee.user_metadata?.full_name || t.assignee.email}</span>
+                    </div>
+                  )}
+                </div>
 
                 {editingIndex === t.originalIndex ? (
                   <div className="space-y-3">

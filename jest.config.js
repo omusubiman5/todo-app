@@ -41,7 +41,7 @@ const customJestConfig = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   transformIgnorePatterns: [
-    '/node_modules/',
+    '/node_modules/(?!(@supabase|isows|@websockets|ws)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
 }

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>認証状態デバッグ</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { color: #d32f2f; }
+        .success { color: #2e7d32; }
+        .info { color: #1976d2; }
+        button { background: #1976d2; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #1565c0; }
+        pre { background: #fff; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 ブラウザ認証状態デバッグ</h1>
+    
+    <div class="section">
+        <h3>📱 操作</h3>
+        <button onclick="checkAuth()">認証状態確認</button>
+        <button onclick="checkLocalStorage()">LocalStorage確認</button>
+        <button onclick="checkCookies()">Cookie確認</button>
+        <button onclick="testLogin()">テストログイン</button>
+        <button onclick="clearAuth()">認証情報クリア</button>
+    </div>
+    
+    <div id="results" class="section">
+        <h3>📊 結果</h3>
+        <div id="output">ボタンを押して認証状態を確認してください...</div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+        
+        const supabaseUrl = 'https://zmxnsfjmusgmapxbcbpn.supabase.co/';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpteG5zZmptdXNnbWFweGJjYnBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MTA2MTEsImV4cCI6MjA2ODQ4NjYxMX0.PoDsoL4V0_fpVdyLfQvMTEPoQyn4Lv8ZVsXCW3UWJ2Q';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        window.checkAuth = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔍 認証状態を確認中...\n\n';
+            
+            try {
+                // セッション確認
+                const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    output.innerHTML += `<span class="error">❌ セッション取得エラー: ${sessionError.message}</span>\n\n`;
+                } else if (sessionData.session) {
+                    output.innerHTML += `<span class="success">✅ アクティブなセッション発見!</span>\n`;
+                    output.innerHTML += `ユーザーID: ${sessionData.session.user.id}\n`;
+                    output.innerHTML += `Email: ${sessionData.session.user.email}\n`;
+                    output.innerHTML += `トークン有効期限: ${new Date(sessionData.session.expires_at * 1000).toLocaleString()}\n\n`;
+                } else {
+                    output.innerHTML += `<span class="error">❌ セッションが見つかりません</span>\n\n`;
+                }
+                
+                // ユーザー情報確認
+                const { data: userData, error: userError } = await supabase.auth.getUser();
+                
+                if (userError) {
+                    output.innerHTML += `<span class="error">❌ ユーザー取得エラー: ${userError.message}</span>\n\n`;
+                } else if (userData.user) {
+                    output.innerHTML += `<span class="success">✅ ユーザー情報取得成功!</span>\n`;
+                    output.innerHTML += `ユーザーID: ${userData.user.id}\n`;
+                    output.innerHTML += `Email: ${userData.user.email}\n\n`;
+                } else {
+                    output.innerHTML += `<span class="error">❌ ユーザー情報なし</span>\n\n`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ エラー: ${error.message}</span>\n`;
+            }
+        }
+        
+        window.checkLocalStorage = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔍 LocalStorage確認中...\n\n';
+            
+            const supabaseKey = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+            const authData = localStorage.getItem(supabaseKey);
+            
+            if (authData) {
+                output.innerHTML += `<span class="success">✅ 認証データ発見!</span>\n`;
+                try {
+                    const parsed = JSON.parse(authData);
+                    output.innerHTML += `<pre>${JSON.stringify(parsed, null, 2)}</pre>\n`;
+                } catch (e) {
+                    output.innerHTML += `<span class="error">❌ JSON解析エラー: ${e.message}</span>\n`;
+                }
+            } else {
+                output.innerHTML += `<span class="error">❌ LocalStorageに認証データなし</span>\n`;
+            }
+        }
+        
+        window.checkCookies = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔍 Cookie確認中...\n\n';
+            
+            const cookies = document.cookie.split(';');
+            const authCookies = cookies.filter(cookie => cookie.includes('supabase') || cookie.includes('auth'));
+            
+            if (authCookies.length > 0) {
+                output.innerHTML += `<span class="success">✅ 認証関連Cookie発見!</span>\n`;
+                authCookies.forEach(cookie => {
+                    output.innerHTML += `${cookie.trim()}\n`;
+                });
+            } else {
+                output.innerHTML += `<span class="error">❌ 認証関連Cookieなし</span>\n`;
+                output.innerHTML += `全Cookie: ${document.cookie || 'なし'}\n`;
+            }
+        }
+        
+        window.testLogin = async function() {
+            const output = document.getElementById('output');
+            const email = prompt('テスト用メールアドレス:');
+            const password = prompt('テスト用パスワード:');
+            
+            if (!email || !password) {
+                output.innerHTML = '<span class="error">❌ メールアドレスとパスワードが必要です</span>';
+                return;
+            }
+            
+            output.innerHTML = '🔍 ログインテスト中...\n\n';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    output.innerHTML += `<span class="error">❌ ログインエラー: ${error.message}</span>\n`;
+                } else {
+                    output.innerHTML += `<span class="success">✅ ログイン成功!</span>\n`;
+                    output.innerHTML += `ユーザーID: ${data.user.id}\n`;
+                    output.innerHTML += `Email: ${data.user.email}\n`;
+                }
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ エラー: ${error.message}</span>\n`;
+            }
+        }
+        
+        window.clearAuth = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔍 認証情報をクリア中...\n\n';
+            
+            try {
+                // Supabaseからサインアウト
+                await supabase.auth.signOut();
+                
+                // LocalStorageクリア
+                const supabaseKey = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+                localStorage.removeItem(supabaseKey);
+                
+                output.innerHTML += `<span class="success">✅ 認証情報をクリアしました</span>\n`;
+                
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ エラー: ${error.message}</span>\n`;
+            }
+        }
+    </script>
+</body>
+</html>

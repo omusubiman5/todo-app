@@ -70,8 +70,6 @@ export default function Home() {
   const [sortByPriority, setSortByPriority] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 

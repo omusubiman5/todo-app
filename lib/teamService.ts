@@ -78,24 +78,71 @@ export async function getUserTeams(): Promise<UserTeams> {
   if (!user) throw new Error('User not authenticated');
 
   try {
-    // まずteamsテーブルから全てのチームを取得（一時的に簡素化）
-    console.log('Querying teams table...');
-    const { data: teams, error: teamsError } = await supabase
+    // 1. オーナーのチーム取得
+    console.log('Querying owned teams...');
+    const { data: ownedTeams, error: ownedError } = await supabase
       .from('teams')
-      .select('*');
+      .select('*')
+      .eq('created_by', user.id);
 
-    console.log('Teams query result:', { data: teams, error: teamsError });
+    console.log('Owned teams query result:', { data: ownedTeams, error: ownedError });
     
-    if (teamsError) {
-      console.error('Teams query error:', teamsError);
-      throw teamsError;
+    if (ownedError) {
+      console.error('Owned teams query error:', ownedError);
+      throw ownedError;
     }
 
-    // 空の結果を返す（まずは基本機能の確認）
+    // 2. team_membersテーブルから参加中のチーム取得
+    console.log('Querying member teams...');
+    const { data: membershipData, error: membershipError } = await supabase
+      .from('team_members')
+      .select(`
+        team_id,
+        role,
+        teams!inner (
+          id,
+          name,
+          description,
+          avatar_url,
+          created_at,
+          created_by
+        )
+      `)
+      .eq('user_id', user.id);
+
+    console.log('Member teams query result:', { data: membershipData, error: membershipError });
+
+    if (membershipError) {
+      console.error('Member teams query error:', membershipError);
+      // エラーがあっても継続（オーナーのチームは表示）
+      console.log('Continuing with owned teams only...');
+    }
+
+    // 3. データを整理
+    const memberTeams = membershipData
+      ?.filter(membership => membership.role === 'member' || membership.role === 'admin')
+      ?.map(membership => ({
+        ...membership.teams,
+        role: membership.role
+      })) || [];
+
+    const guestTeams = membershipData
+      ?.filter(membership => membership.role === 'guest')
+      ?.map(membership => ({
+        ...membership.teams,
+        role: membership.role
+      })) || [];
+
+    console.log('Final user teams result:', {
+      owned_teams: ownedTeams?.length || 0,
+      member_teams: memberTeams.length,
+      guest_teams: guestTeams.length
+    });
+
     return {
-      owned_teams: teams?.filter(team => team.created_by === user.id) || [],
-      member_teams: [],
-      guest_teams: []
+      owned_teams: ownedTeams || [],
+      member_teams: memberTeams,
+      guest_teams: guestTeams
     };
   } catch (error) {
     console.error('Error in getUserTeams:', error);

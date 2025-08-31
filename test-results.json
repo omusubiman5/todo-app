@@ -1,0 +1,589 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\omusu\\todo-app\\playwright.config.js",
+    "rootDir": "C:/Users/omusu/todo-app/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/omusu/todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/omusu/todo-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/omusu/todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/omusu/todo-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/omusu/todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/omusu/todo-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 2,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "critical-bugs-fix-validation.spec.js",
+      "file": "critical-bugs-fix-validation.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "重要バグ修正検証",
+          "file": "critical-bugs-fix-validation.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "④ タスクボックス透明度とチェックボックス状態の一致",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11873,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 テスト開始: ページ初期化\n"
+                        },
+                        {
+                          "text": "🔐 ログイン処理開始\n"
+                        },
+                        {
+                          "text": "📧 メール入力\n"
+                        },
+                        {
+                          "text": "🔒 パスワード入力\n"
+                        },
+                        {
+                          "text": "✅ ログインボタンクリック\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Supabase URL: https://zmxnsfjmusgmapxbcbpn.supabase.co/\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Anon Key exists: true\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Login attempt for: omusubiman@gmail.com\n"
+                        },
+                        {
+                          "text": "⏳ ログイン後のリダイレクト待機\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] 🚨 Unexpected Error Details:\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error type: object\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error name: ReferenceError\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error message: setAuthError is not defined\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error stack: ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Full error object: ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Network online: true\n"
+                        },
+                        {
+                          "text": "[PAGE ERROR] setAuthError is not defined\n"
+                        },
+                        {
+                          "text": "[ERROR STACK] ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:283:67)\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "✅ ログイン完了: http://localhost:3000/home\n"
+                        },
+                        {
+                          "text": "🚀 テスト開始: ページ初期化\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] Failed to fetch notifications: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch\n    at http://localhost…static/chunks/node_modules_a20bd2cc._.js:6230:32), hint: , code: }\n"
+                        },
+                        {
+                          "text": "🔐 ログイン処理開始\n"
+                        },
+                        {
+                          "text": "📧 メール入力\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "🔒 パスワード入力\n"
+                        },
+                        {
+                          "text": "✅ ログインボタンクリック\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Supabase URL: https://zmxnsfjmusgmapxbcbpn.supabase.co/\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Anon Key exists: true\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Debug - Login attempt for: omusubiman@gmail.com\n"
+                        },
+                        {
+                          "text": "⏳ ログイン後のリダイレクト待機\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] Failed to load resource: the server responded with a status of 400 ()\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] 🚨 Supabase Auth Error Details:\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Message: Invalid login credentials\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Code: invalid_credentials\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Status: 400\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Full error object: AuthApiError: Invalid login credentials\n    at handleError (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7169:11)\n    at async _handleRequest (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7219:9)\n    at async _request (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7199:18)\n    at async SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8157:23)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] 🚨 Unexpected Error Details:\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error type: object\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error name: ReferenceError\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error message: setAuthError is not defined\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Error stack: ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:224:71)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Full error object: ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:224:71)\n"
+                        },
+                        {
+                          "text": "[BROWSER ERROR] - Network online: true\n"
+                        },
+                        {
+                          "text": "[PAGE ERROR] setAuthError is not defined\n"
+                        },
+                        {
+                          "text": "[ERROR STACK] ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:283:67)\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
+                        },
+                        {
+                          "text": "✅ ログイン完了: http://localhost:3000/home\n"
+                        },
+                        {
+                          "text": "🧪 透明度とチェックボックス状態の確認\n"
+                        },
+                        {
+                          "text": "🔍 既存タスク数: 28\n"
+                        },
+                        {
+                          "text": "📋 タスク 1:\n"
+                        },
+                        {
+                          "text": "  - チェックボックス: チェック済み\n"
+                        },
+                        {
+                          "text": "  - opacity-60: あり\n"
+                        },
+                        {
+                          "text": "✅ 正常: チェック状態と透明度が一致\n"
+                        },
+                        {
+                          "text": "📋 タスク 2:\n"
+                        },
+                        {
+                          "text": "  - チェックボックス: チェック済み\n"
+                        },
+                        {
+                          "text": "  - opacity-60: あり\n"
+                        },
+                        {
+                          "text": "✅ 正常: チェック状態と透明度が一致\n"
+                        },
+                        {
+                          "text": "📋 タスク 3:\n"
+                        },
+                        {
+                          "text": "  - チェックボックス: チェック済み\n"
+                        },
+                        {
+                          "text": "  - opacity-60: あり\n"
+                        },
+                        {
+                          "text": "✅ 正常: チェック状態と透明度が一致\n"
+                        },
+                        {
+                          "text": "✅ 透明度バグは見つかりませんでした\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-31T11:40:27.057Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bc943389acb620b5b2b8-68f65bfdb7e110dc8c76",
+              "file": "critical-bugs-fix-validation.spec.js",
+              "line": 278,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-08-31T11:40:24.987Z",
+    "duration": 14769.059000000001,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

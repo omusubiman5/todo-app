@@ -62,7 +62,7 @@ export default function TeamDetailPage() {
 
   useEffect(() => {
     loadTeamDetails();
-  }, [teamId]);
+  }, [teamId, loadTeamDetails]);
 
   const handleUpdateTeam = async () => {
     if (!team) return;

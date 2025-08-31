@@ -58,9 +58,9 @@ export const useTaskStats = () => {
       return;
     }
 
-    const fetchTaskStats = async () => {
+    const fetchTaskStats = async (showLoading = true) => {
       try {
-        setLoading(true);
+        if (showLoading) setLoading(true);
         setError(null);
 
         const { data: tasks, error } = await supabase
@@ -78,7 +78,7 @@ export const useTaskStats = () => {
         console.error('Error fetching task stats:', err);
         setError('統計データの取得に失敗しました');
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
     };
 
@@ -96,7 +96,7 @@ export const useTaskStats = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          fetchTaskStats();
+          fetchTaskStats(false); // リアルタイム更新時はloadingを表示しない
         }
       )
       .subscribe();

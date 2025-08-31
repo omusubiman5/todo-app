@@ -151,4 +151,6 @@ export interface WorkspaceContext {
   type: 'personal' | 'team';
   team_id?: string | null;
   team_name?: string;
+  // Internal field for React change detection
+  _switchedAt?: number;
 }

@@ -41,11 +41,17 @@ export const AUTH_ERROR_CODES = {
 
 export type AuthErrorCode = typeof AUTH_ERROR_CODES[keyof typeof AUTH_ERROR_CODES];
 
+interface SupabaseError {
+  message?: string;
+  code?: string;
+  status?: number;
+}
+
 /**
  * Map Supabase errors to safe user messages
  */
-export function mapSupabaseError(error: any): AuthError {
-  const errorMessage = error?.message?.toLowerCase() || '';
+export function mapSupabaseError(error: SupabaseError | Error | unknown): AuthError {
+  const errorMessage = (error as SupabaseError)?.message?.toLowerCase() || '';
   
   // Rate limiting
   if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {

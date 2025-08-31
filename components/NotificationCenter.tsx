@@ -18,10 +18,10 @@ export default function NotificationCenter({ darkMode = false }: NotificationCen
   const [unreadCount, setUnreadCount] = useState(0);
 
   // 通知取得
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (showLoading = true) => {
     if (!user) return;
 
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       const data = await SharedTaskService.getNotifications(user.id);
       setNotifications(data);
@@ -29,7 +29,7 @@ export default function NotificationCenter({ darkMode = false }: NotificationCen
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   }, [user]);
 
@@ -43,7 +43,7 @@ export default function NotificationCenter({ darkMode = false }: NotificationCen
 
     const channel = SharedTaskService.subscribeToNotifications(user.id, (payload) => {
       console.log('Real-time notification update:', payload);
-      fetchNotifications();
+      fetchNotifications(false); // リアルタイム更新時はloadingを表示しない
     });
 
     return () => {
