@@ -234,58 +234,65 @@ export class SharedTaskService {
       throw new Error('このタスクを削除する権限がありません');
     }
 
-    // 外部キー制約を回避するアプローチ
-    console.log('🗑️ タスク削除開始（制約回避版）');
+    // 関連データの事前削除（外部キー制約を回避）
+    console.log('🗑️ タスク削除開始（関連データから削除）');
     
     try {
-      // PostgreSQL関数を使用してカスケード削除を安全に実行
-      const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_task_safely', {
-        task_id_param: taskId
-      });
+      // 関連データを先に削除
+      console.log('🧹 関連データ削除開始:', { taskId });
       
-      if (deleteError) {
-        console.log('⚠️ RPC削除失敗、通常削除を試行:', deleteError);
-        // RPC関数が存在しない場合、通常の削除を試行
-        throw deleteError;
+      // 1. コメントを削除
+      const { error: commentsError } = await supabase
+        .from('task_comments')
+        .delete()
+        .eq('task_id', taskId);
+      
+      if (commentsError && commentsError.code !== 'PGRST116') { // PGRST116 = データが見つからない（正常）
+        console.warn('⚠️ コメント削除警告（継続）:', commentsError);
+      } else {
+        console.log('✅ タスクコメント削除完了');
       }
       
-      console.log('✅ RPC削除成功:', deleteResult);
-      return; // RPC削除が成功した場合は終了
+      // 2. 履歴を削除
+      const { error: historyError } = await supabase
+        .from('task_history')
+        .delete()
+        .eq('task_id', taskId);
       
-    } catch (rpcError) {
-      console.log('⚠️ RPC削除エラー、通常削除にフォールバック:', rpcError);
+      if (historyError && historyError.code !== 'PGRST116') {
+        console.warn('⚠️ 履歴削除警告（継続）:', historyError);
+      } else {
+        console.log('✅ タスク履歴削除完了');
+      }
+      
+      // 3. 通知を削除（task_idがdataに含まれる通知）
+      const { error: notificationsError } = await supabase
+        .from('notifications')
+        .delete()
+        .ilike('data', `%${taskId}%`);
+      
+      if (notificationsError && notificationsError.code !== 'PGRST116') {
+        console.warn('⚠️ 通知削除警告（継続）:', notificationsError);
+      } else {
+        console.log('✅ 関連通知削除完了');
+      }
+      
+    } catch (cleanupError) {
+      console.warn('⚠️ 関連データ削除で警告が発生しましたが、メインタスク削除を継続します:', cleanupError);
     }
     
-    // 通常削除（外部キー制約エラーを予期）
+    // 4. メインタスクを削除
+    console.log('🎯 メインタスク削除実行:', { taskId });
     const { data, error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId)
       .select();
-    
-    // 削除後の関連データクリーンアップ
-    setTimeout(async () => {
-      try {
-        await supabase.from('task_history').delete().eq('task_id', taskId);
-        await supabase.from('task_comments').delete().eq('task_id', taskId);
-        console.log('✅ 遅延関連データクリーンアップ完了');
-      } catch (cleanupError) {
-        console.log('⚠️ 遅延クリーンアップエラー（無視）:', cleanupError);
-      }
-    }, 1000);
 
     console.log('🗑️ SharedTaskService.deleteTask 結果:', { data, error, taskId });
 
     if (error) {
       console.error('❌ SharedTaskService.deleteTask エラー:', error);
-      
-      // 外部キー制約エラーの場合は、UI側で削除として扱う
-      if (error.code === '23503' && error.message.includes('task_history')) {
-        console.log('⚠️ 外部キー制約エラーですが、削除処理を継続します');
-        console.log('✅ タスク削除完了（制約エラー無視）:', { taskId });
-        return; // エラーを投げずに正常終了
-      }
-      
       throw error;
     }
     

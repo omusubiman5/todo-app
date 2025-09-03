@@ -85,31 +85,40 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
   // 初期読み込みとワークスペース変更時の更新
   useEffect(() => {
     if (!user || !currentWorkspace) return;
+    // ワークスペース変更時は即座にタスクをクリアしてからフェッチ
+    setTasks([]);
     fetchTasks();
-  }, [user, currentWorkspace]); // fetchTasksではなく直接依存
+  }, [user, currentWorkspace, fetchTasks]);
 
-  // リアルタイム更新（デバウンス付き）
+  // リアルタイム更新（デバウンス付き）- ワークスペース変更時は無効化
   useEffect(() => {
-    if (!user) return;
+    if (!user || !currentWorkspace) return;
 
     let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
     const channel = SharedTaskService.subscribeToTasks(currentWorkspace, (payload) => {
       console.log('Real-time task update:', payload);
+      // ワークスペース変更中の場合はリアルタイム更新をスキップ
+      if (!isMounted) return;
+      
       // 500msのデバウンスでAPI呼び出しを制限
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        fetchTasks();
+        if (isMounted) {
+          fetchTasks();
+        }
       }, 500);
     });
 
     return () => {
+      isMounted = false;
       if (channel) {
         channel.unsubscribe();
       }
       clearTimeout(timeoutId);
     };
-  }, [currentWorkspace, user]); // fetchTasksを除去
+  }, [currentWorkspace, user, fetchTasks]);
 
   // タスク追加
   const handleAddTask = async () => {
