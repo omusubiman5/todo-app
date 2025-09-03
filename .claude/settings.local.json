@@ -17,7 +17,15 @@
       "Bash(npm run test:coverage:*)",
       "Bash(npx jest:*)",
       "Bash(npx webpack-bundle-analyzer:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(npm run lint)",
+      "Bash(git add:*)",
+      "Read(C:\\c\\Users\\omusu\\todo-app/**)",
+      "Read(C:\\c\\Users\\omusu\\todo-app/**)",
+      "Read(C:\\c\\Users\\omusu\\todo-app/**)",
+      "Read(C:\\c\\Users\\omusu\\todo-app/**)",
+      "Read(C:\\c\\Users\\omusu\\todo-app/**)",
+      "Bash(git log:*)"
     ],
     "deny": []
   }

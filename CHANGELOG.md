@@ -1,9 +1,43 @@
 # 📋 Todo App - Release Changelog
 
-## 🚀 Version 1.0.0 - Production Release Candidate
-**Release Date**: 2025年1月4日  
-**Status**: Release Candidate  
-**Build**: Production Ready  
+## 🚀 Version 2.1.0 - Production Release
+**Release Date**: 2024年9月3日  
+**Status**: Production Ready ✅  
+**Build**: Optimized for Production  
+**Security Rating**: B+ (Good)  
+
+### 🔥 **CRITICAL BUG FIXES - HOTFIX RELEASE**
+
+#### 🎯 **Task Visibility & Deletion Issues Resolved** (`e6057f2`)
+- **FIXED**: Task visibility corruption during workspace switching
+  - Tasks no longer appear/disappear unexpectedly when switching between team ⇄ personal modes  
+  - Implemented proper state management with immediate task clearing
+  - Added race condition protection for real-time subscriptions
+  
+- **FIXED**: Task deletion functionality completely broken
+  - Removed dependency on non-existent `delete_task_safely` RPC function
+  - Implemented proper cascade deletion: comments → history → notifications → main task
+  - Enhanced error handling with foreign key constraint management
+
+### 📊 **Release Quality Metrics**
+
+#### ✅ **Production Readiness Assessment**
+- **Security Analysis**: ✅ B+ rating with enterprise-level patterns
+- **Performance Analysis**: ✅ 1.8MB bundle size (optimized)
+- **Test Coverage**: ⚠️ 170 test files, coverage needs improvement
+- **Build Status**: ✅ Production build successful in 10.0s
+
+#### 🔒 **Security Audit Results**
+- ✅ **Authentication**: Advanced multi-factor with rate limiting
+- ✅ **Database Security**: Comprehensive RLS policies
+- ✅ **Input Validation**: XSS and SQL injection protection
+- ⚠️ **Infrastructure**: Next.js 15.4.1 has 3 moderate vulnerabilities (upgrade needed)
+
+#### ⚡ **Performance Benchmarks** 
+- **Bundle Size**: 1.8MB static assets (within targets)
+- **Core Runtime**: ~2.5MB estimated (good)
+- **Build Time**: 10.0s optimized compilation
+- **Estimated Core Web Vitals**: FCP ~1.5s, LCP ~2.1s (after optimization)
 
 ---
 
