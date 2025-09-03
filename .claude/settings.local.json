@@ -25,7 +25,9 @@
       "Read(C:\\c\\Users\\omusu\\todo-app/**)",
       "Read(C:\\c\\Users\\omusu\\todo-app/**)",
       "Read(C:\\c\\Users\\omusu\\todo-app/**)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Read(C:\\Users\\omusu\\.claude/**)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }
