@@ -314,30 +314,38 @@ export class SharedTaskService {
     if (error) throw error;
     if (!members) return [];
 
-    // プロフィール情報を別途取得
-    const memberWithProfiles = await Promise.all(
-      members.map(async (member) => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .eq('id', member.user_id)
-          .single();
+    // プロフィール情報を一括取得（N+1クエリ問題修正）
+    const memberUserIds = members.map(member => member.user_id);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', memberUserIds);
 
-        // auth.usersからメール取得（簡易版）
-        return {
-          user_id: member.user_id,
-          role: member.role,
-          user: {
-            id: member.user_id,
-            email: `user-${member.user_id.slice(0, 8)}@example.com`, // プレースホルダー
-            user_metadata: {
-              full_name: profile?.display_name || null,
-              avatar_url: profile?.avatar_url || null
-            }
+    // プロフィール情報をマップ化
+    const profilesMap = new Map();
+    if (profiles) {
+      profiles.forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
+    }
+
+    // メンバー情報にプロフィールを結合
+    const memberWithProfiles = members.map((member) => {
+      const profile = profilesMap.get(member.user_id);
+      
+      return {
+        user_id: member.user_id,
+        role: member.role,
+        user: {
+          id: member.user_id,
+          email: `user-${member.user_id.slice(0, 8)}@example.com`, // プレースホルダー
+          user_metadata: {
+            full_name: profile?.display_name || null,
+            avatar_url: profile?.avatar_url || null
           }
-        };
-      })
-    );
+        }
+      };
+    });
 
     return memberWithProfiles;
   }

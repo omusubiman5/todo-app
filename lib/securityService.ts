@@ -182,7 +182,15 @@ export class SecurityService {
   /**
    * セキュリティイベントログ
    */
-  private async logSecurityEvent(event: any): Promise<void> {
+  private async logSecurityEvent(event: {
+    event: string;
+    email: string;
+    ip?: string;
+    success?: boolean;
+    errorDetails?: string;
+    error?: string;
+    timestamp: string;
+  }): Promise<void> {
     try {
       // ローカルストレージまたはAPIエンドポイントに記録
       if (typeof window !== 'undefined') {
@@ -213,7 +221,15 @@ export class SecurityService {
   /**
    * セキュリティログの取得（管理者用）
    */
-  getSecurityLogs(): any[] {
+  getSecurityLogs(): Array<{
+    event: string;
+    email: string;
+    ip?: string;
+    success?: boolean;
+    errorDetails?: string;
+    error?: string;
+    timestamp: string;
+  }> {
     try {
       if (typeof window !== 'undefined') {
         return JSON.parse(localStorage.getItem('security_logs') || '[]');
@@ -241,7 +257,7 @@ export class SecurityService {
     const emailRecord = this.rateLimitMap.get(email);
     const ipRecord = clientIP ? this.rateLimitMap.get(clientIP) : null;
     
-    const formatRecord = (record: any) => record ? {
+    const formatRecord = (record: { count: number; resetTime: number } | undefined) => record ? {
       count: record.count,
       remaining: Math.max(0, 3 - record.count),
       resetTime: record.resetTime,
