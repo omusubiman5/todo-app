@@ -55,7 +55,7 @@ export default function Navigation() {
                 >
                   <option value="personal">👤 個人タスク</option>
                   {availableWorkspaces.teams.map((team) => (
-                    <option key={team.team_id} value={team.team_id}>
+                    <option key={team.team_id} value={team.team_id || ''}>
                       👥 {team.team_name}
                     </option>
                   ))}

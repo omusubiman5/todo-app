@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { EnhancedTaskService, TaskStatistics, Priority } from '@/lib/enhancedTaskService';
-import { useAuth } from '@/contexts/AuthProvider';
-import { useWorkspace } from '@/contexts/WorkspaceProvider';
+import { useAuth } from '@/components/AuthProvider';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -76,7 +76,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
 export default function EnhancedTaskDashboard() {
   const { user } = useAuth();
-  const { workspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
   
   const [statistics, setStatistics] = useState<TaskStatistics | null>(null);
   const [priorities, setPriorities] = useState<Priority[]>([]);

@@ -181,7 +181,7 @@ export default function SecureLoginForm({
             data: {
               email_confirm: true
             },
-            captchaToken: captchaToken
+            captchaToken: captchaToken || undefined
           }
         });
       } else {
@@ -190,7 +190,7 @@ export default function SecureLoginForm({
           email: formState.email.trim().toLowerCase(),
           password: formState.password,
           options: {
-            captchaToken: captchaToken
+            captchaToken: captchaToken || undefined
           }
         });
       }
@@ -263,7 +263,7 @@ export default function SecureLoginForm({
       console.error('- Error type:', typeof error);
       console.error('- Error name:', error.name);
       console.error('- Error message:', error.message);
-      console.error('- Error stack:', err.stack);
+      console.error('- Error stack:', err instanceof Error ? err.stack : 'No stack trace');
       console.error('- Full error object:', err);
       console.error('- Network online:', navigator.onLine);
       

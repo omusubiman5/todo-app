@@ -27,7 +27,7 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
   } = options;
 
   const { user } = useAuth();
-  const { workspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
 
   // 状態管理
   const [tasks, setTasks] = useState<SharedTask[]>([]);
@@ -53,27 +53,25 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
 
       const appliedFilters = customFilters || filters;
       const response = await SharedTaskService.getTasks(
-        workspace,
-        appliedFilters,
-        batchSize,
-        cursor
+        currentWorkspace,
+        user?.id || ''
       );
 
       if (reset) {
-        setTasks(response.tasks);
-        setNextCursor(response.nextCursor);
-        setHasMore(response.hasMore);
+        setTasks(response);
+        setNextCursor(null);
+        setHasMore(false);
       } else {
-        setTasks(prev => [...prev, ...response.tasks]);
-        setNextCursor(response.nextCursor);
-        setHasMore(response.hasMore);
+        setTasks(prev => [...prev, ...response]);
+        setNextCursor(null);
+        setHasMore(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'タスクの取得に失敗しました');
     } finally {
       setIsLoading(false);
     }
-  }, [user, workspace, filters, batchSize]);
+  }, [user, currentWorkspace, filters, batchSize]);
 
   // フィルタリングされたタスクの計算をメモ化
   const filteredTasks = useMemo(() => {
@@ -112,12 +110,13 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
 
     try {
       const newTask = await SharedTaskService.createTask({
-        ...taskData,
+        text: taskData.text || '',
         user_id: user.id,
-        team_id: workspace.type === 'team' ? workspace.team_id : null,
+        team_id: currentWorkspace.type === 'team' ? currentWorkspace.team_id : null,
         completed: false,
-        priority: taskData.priority || '中'
-      });
+        priority: taskData.priority || '中',
+        ...taskData
+      }, currentWorkspace);
 
       // 楽観的更新
       setTasks(prev => [newTask, ...prev]);
@@ -126,7 +125,7 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
       setError(err instanceof Error ? err.message : 'タスクの作成に失敗しました');
       throw err;
     }
-  }, [user, workspace]);
+  }, [user, currentWorkspace]);
 
   // タスク更新の最適化
   const updateTask = useCallback(async (taskId: string, updates: Partial<SharedTask>) => {
@@ -182,7 +181,10 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
           : task
       ));
 
-      await SharedTaskService.bulkUpdateTasks(taskIds, updates);
+      // 個別更新の代替実装
+      for (const taskId of taskIds) {
+        await SharedTaskService.updateTask(taskId, updates);
+      }
     } catch (err) {
       // エラー時は再取得
       await fetchTasks(true);
@@ -207,7 +209,7 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
     if (user) {
       fetchTasks(true);
     }
-  }, [user, workspace, fetchTasks]);
+  }, [user, currentWorkspace, fetchTasks]);
 
   // 自動更新
   useEffect(() => {
@@ -224,8 +226,12 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
   useEffect(() => {
     if (!enableRealtime || !user) return;
 
-    const channel = SharedTaskService.subscribeToTasks(workspace, (payload) => {
-      const { eventType, old: oldRecord, new: newRecord } = payload;
+    const channel = SharedTaskService.subscribeToTasks(currentWorkspace, (payload) => {
+      const { eventType, old: oldRecord, new: newRecord } = payload as {
+        eventType: string;
+        old?: SharedTask;
+        new?: SharedTask;
+      };
 
       setTasks(prev => {
         switch (eventType) {
@@ -253,7 +259,7 @@ export function useOptimizedTasks(options: UseOptimizedTasksOptions = {}) {
         channel.unsubscribe();
       }
     };
-  }, [enableRealtime, user, workspace]);
+  }, [enableRealtime, user, currentWorkspace]);
 
   return {
     tasks: filteredTasks,

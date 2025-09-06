@@ -174,7 +174,7 @@ export function useOptimisticTasks(
     });
 
     try {
-      const newTask = await SharedTaskService.createTask(taskData, workspace, userId);
+      const newTask = await SharedTaskService.createTask(taskData, workspace);
       
       // 成功時: 楽観的更新を実際のデータで置き換え
       setTasks(prevTasks => 

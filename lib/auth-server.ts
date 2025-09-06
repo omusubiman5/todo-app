@@ -16,8 +16,8 @@ export function createServerSupabaseClient(req?: NextRequest) {
     supabaseAnonKey,
     {
       cookies: {
-        get(name: string) {
-          const cookieStore = cookies();
+        async get(name: string) {
+          const cookieStore = await cookies();
           return cookieStore.get(name)?.value;
         },
       },

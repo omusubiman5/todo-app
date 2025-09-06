@@ -482,40 +482,40 @@ export class EnhancedTaskService {
   private static normalizeTask(rawTask: unknown): EnhancedTask {
     const task = rawTask as Record<string, unknown>; // Type assertion to access properties
     return {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      user_id: task.user_id,
-      team_id: task.team_id,
-      assigned_to: task.assigned_to,
-      created_by: task.created_by,
-      due_date: task.due_date,
-      completed_at: task.completed_at,
-      created_at: task.created_at,
-      updated_at: task.updated_at,
-      custom_fields: task.custom_fields || {},
+      id: task.id as string,
+      title: task.title as string,
+      description: task.description as string,
+      status: (task.status as "completed" | "pending" | "in_progress") || "pending",
+      priority: task.priority as Priority,
+      user_id: task.user_id as string,
+      team_id: task.team_id as string,
+      assigned_to: (task.assigned_to as string | null | undefined) || null,
+      created_by: task.created_by as string | undefined,
+      due_date: task.due_date as string | undefined,
+      completed_at: (task.completed_at as string | null | undefined) || undefined,
+      created_at: task.created_at as string,
+      updated_at: task.updated_at as string,
+      custom_fields: (task.custom_fields as Record<string, string | number | boolean | null>) || {},
       
       creator: task.creator ? {
-        id: task.creator.id,
-        email: task.creator.email || 'unknown@example.com',
-        display_name: task.creator.display_name || task.creator.email || 'Unknown User'
+        id: (task.creator as any).id,
+        email: (task.creator as any).email || 'unknown@example.com',
+        display_name: (task.creator as any).display_name || (task.creator as any).email || 'Unknown User'
       } : undefined,
       
       assignee: task.assignee ? {
-        id: task.assignee.id,
-        email: task.assignee.email || 'unknown@example.com',
-        display_name: task.assignee.display_name || task.assignee.email || 'Unknown User'
+        id: (task.assignee as any).id,
+        email: (task.assignee as any).email || 'unknown@example.com',
+        display_name: (task.assignee as any).display_name || (task.assignee as any).email || 'Unknown User'
       } : null,
       
       team: task.team ? {
-        id: task.team.id,
-        name: task.team.name
+        id: (task.team as any).id,
+        name: (task.team as any).name
       } : null,
       
-      comment_count: task.comment_count || 0,
-      days_until_due: task.days_until_due
+      comment_count: (task.comment_count as number) || 0,
+      days_until_due: task.days_until_due as number | undefined
     };
   }
 

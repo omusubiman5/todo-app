@@ -218,14 +218,14 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
     } catch (error) {
       console.error('❌ タスク削除エラー:', error);
       console.error('エラーの詳細:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as Record<string, unknown>).code || 'unknown',
+        details: (error as Record<string, unknown>).details || null,
+        hint: (error as Record<string, unknown>).hint || null
       });
       
       // RLS権限エラーの可能性を示唆
-      if (error.code === '42501' || error.message.includes('permission') || error.message.includes('policy')) {
+      if ((error as Record<string, unknown>).code === '42501' || (error instanceof Error && (error.message.includes('permission') || error.message.includes('policy')))) {
         console.error('🚫 RLS権限エラーの可能性があります。タスクの所有者または適切なチーム権限が必要です。');
       }
     }

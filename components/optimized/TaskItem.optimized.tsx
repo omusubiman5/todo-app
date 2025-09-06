@@ -79,12 +79,12 @@ const TaskItem = memo<TaskItemProps>(({
 
   // 📅 Formatted date (memoized)
   const formattedDate = useMemo(() => {
-    return new Date(task.created_at).toLocaleString('ja-JP', {
+    return task.created_at ? new Date(task.created_at).toLocaleString('ja-JP', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    });
+    }) : '不明';
   }, [task.created_at]);
 
   // 👤 Assignee display (memoized)

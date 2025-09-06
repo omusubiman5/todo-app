@@ -37,7 +37,8 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
         onError({
           code: 'password_mismatch',
           userMessage: 'パスワードが一致しません。',
-          technicalMessage: 'Password confirmation does not match'
+          message: 'Password confirmation does not match',
+          severity: 'error'
         });
         return;
       }
@@ -46,7 +47,8 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
         onError({
           code: 'weak_password',
           userMessage: 'パスワードは8文字以上で、大文字・小文字・数字・記号を含む必要があります。',
-          technicalMessage: 'Password does not meet strength requirements'
+          message: 'Password does not meet strength requirements',
+          severity: 'error'
         });
         return;
       }
@@ -69,7 +71,8 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
         onError({
           code: 'no_session',
           userMessage: 'セッションが無効です。再度リセットリンクをクリックして実行してください。',
-          technicalMessage: 'No active session found'
+          message: 'No active session found',
+          severity: 'error'
         });
         return;
       }
@@ -93,13 +96,15 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
             onError({
               code: 'session_invalid',
               userMessage: 'パスワードリセットセッションが無効です。新しいリセットメールを要求してください。',
-              technicalMessage: error.message
+              message: error.message,
+              severity: 'error'
             });
           } else {
             onError({
               code: 'update_failed',
               userMessage: `パスワードの更新に失敗しました。エラー: ${error.message}`,
-              technicalMessage: error.message
+              message: error.message,
+              severity: 'error'
             });
           }
           return;
@@ -118,7 +123,8 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
         onError({
           code: 'network_error',
           userMessage: 'ネットワークエラーが発生しました。接続を確認して再度お試しください。',
-          technicalMessage: networkError instanceof Error ? networkError.message : 'Network error'
+          message: networkError instanceof Error ? networkError.message : 'Network error',
+          severity: 'error'
         });
         return;
       }
@@ -131,7 +137,8 @@ export default function PasswordResetForm({ onSuccess, onError }: PasswordResetF
       onError({
         code: 'update_failed',
         userMessage: 'パスワード変更中にエラーが発生しました。',
-        technicalMessage: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        severity: 'error'
       });
     } finally {
       setIsLoading(false);
