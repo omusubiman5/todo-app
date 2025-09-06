@@ -104,8 +104,8 @@ class PerformanceMonitoring {
           rating: this.rateLCP(lastEntry.startTime),
           timestamp: new Date().toISOString(),
           metadata: {
-            element: lastEntry.element?.tagName,
-            url: lastEntry.url
+            element: 'element' in lastEntry ? (lastEntry as PerformanceEntry & {element?: Element}).element?.tagName : undefined,
+            url: 'url' in lastEntry ? (lastEntry as PerformanceEntry & {url?: string}).url : undefined
           }
         });
       });

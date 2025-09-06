@@ -446,7 +446,7 @@ export const withErrorHandling = <T extends (...args: unknown[]) => unknown>(
       const result = fn(...args);
       
       // Promise を返す関数の場合
-      if (result && typeof result.catch === 'function') {
+      if (result && result instanceof Promise) {
         return result.catch((error: Error) => {
           errorMonitor.reportError(
             errorMessage || `Error in ${fn.name || 'anonymous function'}`,
@@ -469,7 +469,7 @@ export const withErrorHandling = <T extends (...args: unknown[]) => unknown>(
   }) as T;
 };
 
-// 型定義をエクスポート
-export type { ErrorInfo, ErrorMetrics };
+// 型定義をエクスポート  
+export type { ErrorInfo as AppErrorInfo, ErrorMetrics as AppErrorMetrics };
 
 import React from 'react';

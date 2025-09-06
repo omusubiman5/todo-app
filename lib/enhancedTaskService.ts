@@ -82,7 +82,7 @@ export interface TaskFilter {
   due_from?: string;
   due_to?: string;
   has_due_date?: boolean;
-  custom_field_filters?: Record<string, string | number | boolean>;
+  custom_field_filters?: Record<string, string | number | boolean | null>;
   limit?: number;
   offset?: number;
 }
@@ -498,20 +498,20 @@ export class EnhancedTaskService {
       custom_fields: (task.custom_fields as Record<string, string | number | boolean | null>) || {},
       
       creator: task.creator ? {
-        id: (task.creator as any).id,
-        email: (task.creator as any).email || 'unknown@example.com',
-        display_name: (task.creator as any).display_name || (task.creator as any).email || 'Unknown User'
+        id: (task.creator as Record<string, unknown>).id as string,
+        email: ((task.creator as Record<string, unknown>).email as string) || 'unknown@example.com',
+        display_name: ((task.creator as Record<string, unknown>).display_name as string) || ((task.creator as Record<string, unknown>).email as string) || 'Unknown User'
       } : undefined,
       
       assignee: task.assignee ? {
-        id: (task.assignee as any).id,
-        email: (task.assignee as any).email || 'unknown@example.com',
-        display_name: (task.assignee as any).display_name || (task.assignee as any).email || 'Unknown User'
+        id: (task.assignee as Record<string, unknown>).id as string,
+        email: ((task.assignee as Record<string, unknown>).email as string) || 'unknown@example.com',
+        display_name: ((task.assignee as Record<string, unknown>).display_name as string) || ((task.assignee as Record<string, unknown>).email as string) || 'Unknown User'
       } : null,
       
       team: task.team ? {
-        id: (task.team as any).id,
-        name: (task.team as any).name
+        id: (task.team as Record<string, unknown>).id as string,
+        name: (task.team as Record<string, unknown>).name as string
       } : null,
       
       comment_count: (task.comment_count as number) || 0,

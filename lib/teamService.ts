@@ -141,8 +141,8 @@ export async function getUserTeams(): Promise<UserTeams> {
 
     return {
       owned_teams: ownedTeams || [],
-      member_teams: memberTeams,
-      guest_teams: guestTeams
+      member_teams: (memberTeams as unknown as Team[]) || [],
+      guest_teams: (guestTeams as unknown as Team[]) || []
     };
   } catch (error) {
     console.error('Error in getUserTeams:', error);
