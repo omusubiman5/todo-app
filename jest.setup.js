@@ -1,91 +1,69 @@
+// Jest セットアップファイル
 import '@testing-library/jest-dom'
 
-// Global test utilities
-if (typeof global.structuredClone === 'undefined') {
-  global.structuredClone = (obj) => JSON.parse(JSON.stringify(obj));
-}
+// グローバルモック
+global.fetch = jest.fn()
 
-// Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-
-// Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  constructor() {}
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
-
-// Mock Next.js router
+// Next.js ルーター モック
 jest.mock('next/navigation', () => ({
-  useRouter() {
-    return {
-      push: jest.fn(),
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-      back: jest.fn(),
-      forward: jest.fn(),
-      refresh: jest.fn(),
-    }
-  },
-  useSearchParams() {
-    return {
-      get: jest.fn()
-    }
-  },
-  usePathname() {
-    return '/test-path'
-  }
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+  }),
+  useSearchParams: () => ({
+    get: jest.fn(),
+    getAll: jest.fn(),
+    has: jest.fn(),
+    keys: jest.fn(),
+    values: jest.fn(),
+    entries: jest.fn(),
+    forEach: jest.fn(),
+    toString: jest.fn(),
+  }),
+  usePathname: () => '/',
 }))
 
-// Mock Supabase
+// Supabase クライアント モック
 jest.mock('./lib/supabase', () => ({
   supabase: {
     auth: {
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
       getSession: jest.fn(),
+      getUser: jest.fn(),
+      signOut: jest.fn(),
       onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
+        data: { subscription: { unsubscribe: jest.fn() } },
       })),
-      refreshSession: jest.fn()
-    }
-  }
+    },
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn(),
+    })),
+  },
 }))
 
-// Mock window.navigator
-Object.defineProperty(window, 'navigator', {
-  writable: true,
-  value: {
-    userAgent: 'Mozilla/5.0 (Test Browser)'
+// console エラーを抑制（テスト中の不要なログを避ける）
+const originalError = console.error
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: ReactDOM.render is deprecated') ||
+       args[0].includes('Warning: An invalid form control'))
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
   }
 })
 
-// Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-}
+afterAll(() => {
+  console.error = originalError
+})

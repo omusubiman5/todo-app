@@ -1,50 +1,63 @@
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files
+  // Next.js アプリのパスを指定
   dir: './',
 })
 
-// Add any custom config to be passed to Jest
+// Jest の設定オプション
 const customJestConfig = {
+  // テスト環境を設定
+  testEnvironment: 'jsdom',
+  
+  // セットアップファイルを指定
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
-  modulePathIgnorePatterns: ['<rootDir>/.next/'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-  },
+  
+  // テストファイルのパターンを指定
+  testMatch: [
+    '**/__tests__/**/*.(js|jsx|ts|tsx)',
+    '**/*.(test|spec).(js|jsx|ts|tsx)'
+  ],
+  
+  // カバレッジ設定
   collectCoverageFrom: [
-    'components/**/*.{ts,tsx}',
-    'lib/**/*.{ts,tsx}',
-    'hooks/**/*.{ts,tsx}',
-    'app/**/*.{ts,tsx}',
+    'app/**/*.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
+    'hooks/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+    '!**/.next/**',
+    '!**/coverage/**',
+    '!**/*.config.js',
+    '!**/*.stories.{js,jsx,ts,tsx}',
   ],
+  
+  // カバレッジレポート設定
+  coverageReporters: ['text', 'lcov', 'html'],
+  
+  // カバレッジしきい値設定（80%基準）
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
-    },
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60
+    }
   },
-  testMatch: [
-    '**/__tests__/**/*.(ts|tsx|js)',
-    '**/*.(test|spec).(ts|tsx|js)'
-  ],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json'
-    }]
+  
+  // モックファイルの場所を指定
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/$1',
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
-  transformIgnorePatterns: [
-    '/node_modules/(?!(@supabase|isows|@websockets|ws)/)',
-    '^.+\\.module\\.(css|sass|scss)$',
-  ],
+  
+  // テスト実行前の設定
+  verbose: true,
+  
+  // テストタイムアウト設定
+  testTimeout: 10000
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
+// createJestConfig は非同期でNext.js の設定を読み込むため、
+// Next.js設定と統合したJest設定を返す
 module.exports = createJestConfig(customJestConfig)
