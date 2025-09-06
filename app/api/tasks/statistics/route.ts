@@ -157,8 +157,20 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// 統計用タスク型定義
+interface StatisticsTask {
+  id: string;
+  text: string;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+  priority?: string;
+  user_id?: string;
+  team_id?: string | null;
+}
+
 // ヘルパー関数: 日別作成統計
-function getDailyCreationStats(tasks: any[]) {
+function getDailyCreationStats(tasks: StatisticsTask[]) {
   const last7Days = [];
   const now = new Date();
   
@@ -182,7 +194,7 @@ function getDailyCreationStats(tasks: any[]) {
 }
 
 // ヘルパー関数: 日別完了統計
-function getDailyCompletionStats(tasks: any[]) {
+function getDailyCompletionStats(tasks: StatisticsTask[]) {
   const last7Days = [];
   const now = new Date();
   
@@ -208,7 +220,7 @@ function getDailyCompletionStats(tasks: any[]) {
 }
 
 // ヘルパー関数: 平均完了時間
-function getAverageCompletionTime(tasks: any[]) {
+function getAverageCompletionTime(tasks: StatisticsTask[]) {
   // completed_atカラムが存在しないため、完了タスクの作成から更新までの時間を計算
   const completedTasks = tasks.filter(task => task.completed && task.created_at && task.updated_at);
   
@@ -225,7 +237,7 @@ function getAverageCompletionTime(tasks: any[]) {
 }
 
 // ヘルパー関数: 生産的な時間帯
-function getProductiveHours(tasks: any[]) {
+function getProductiveHours(tasks: StatisticsTask[]) {
   const hourCounts = new Array(24).fill(0);
   
   // completed_atが存在しないため、完了タスクの更新時間を使用
@@ -244,7 +256,7 @@ function getProductiveHours(tasks: any[]) {
 }
 
 // ヘルパー関数: タスク長統計
-function getTaskLengthStats(tasks: any[]) {
+function getTaskLengthStats(tasks: StatisticsTask[]) {
   if (tasks.length === 0) return { average: 0, max: 0, min: 0 };
   
   const lengths = tasks.map(task => task.text?.length || 0);

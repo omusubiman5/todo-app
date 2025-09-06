@@ -131,8 +131,9 @@ class PerformanceMonitoring {
       let clsValue = 0;
       const clsObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry: PerformanceEntry) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+          const layoutShiftEntry = entry as any; // Layout shift entries have additional properties
+          if (!layoutShiftEntry.hadRecentInput) {
+            clsValue += layoutShiftEntry.value || 0;
           }
         });
         
@@ -241,30 +242,32 @@ class PerformanceMonitoring {
       
       this.captureMetric({
         name: 'network-information',
-        value: connection.downlink || 0,
+        value: connection?.downlink || 0,
         timestamp: new Date().toISOString(),
         url: window.location.href,
         metadata: {
-          effectiveType: connection.effectiveType,
-          rtt: connection.rtt,
-          saveData: connection.saveData
+          effectiveType: connection?.effectiveType,
+          rtt: connection?.rtt,
+          saveData: (connection as any)?.saveData
         }
       });
 
       // ネットワーク変更の監視
-      connection.addEventListener('change', () => {
-        this.captureMetric({
-          name: 'network-change',
-          value: connection.downlink || 0,
-          timestamp: new Date().toISOString(),
-          url: window.location.href,
-          metadata: {
-            effectiveType: connection.effectiveType,
-            rtt: connection.rtt,
-            saveData: connection.saveData
-          }
+      if (connection && 'addEventListener' in connection) {
+        connection.addEventListener('change', () => {
+          this.captureMetric({
+            name: 'network-change',
+            value: connection?.downlink || 0,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            metadata: {
+              effectiveType: connection?.effectiveType,
+              rtt: connection?.rtt,
+              saveData: (connection as any)?.saveData
+            }
+          });
         });
-      });
+      }
     }
   }
 
@@ -620,7 +623,6 @@ export function withPerformanceMeasurement<P extends object>(
   return MeasuredComponent;
 }
 
-// 型定義をエクスポート
-export type { PerformanceMetric, WebVitalsMetric, CustomMetric };
+// 型定義は上部で既にエクスポート済み
 
 import React from 'react';

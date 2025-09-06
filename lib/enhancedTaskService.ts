@@ -195,7 +195,7 @@ export class EnhancedTaskService {
     updates: Partial<EnhancedTask>,
     userId: string
   ): Promise<EnhancedTask> {
-    const updateData: any = { ...updates };
+    const updateData: Record<string, unknown> = { ...updates };
     
     // completed_atの自動設定
     if (updates.status === 'completed' && !updateData.completed_at) {
@@ -480,7 +480,7 @@ export class EnhancedTaskService {
    * タスクデータの正規化
    */
   private static normalizeTask(rawTask: unknown): EnhancedTask {
-    const task = rawTask as any; // Type assertion to access properties
+    const task = rawTask as Record<string, any>; // Type assertion to access properties
     return {
       id: task.id,
       title: task.title,

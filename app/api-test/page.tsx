@@ -2,12 +2,19 @@
 
 import { useState } from 'react';
 
+interface ApiTestResult {
+  status: number;
+  data: unknown;
+  error?: string;
+  timestamp: string;
+}
+
 export default function ApiTestPage() {
-  const [results, setResults] = useState<any>({});
+  const [results, setResults] = useState<Record<string, ApiTestResult>>({});
   const [loading, setLoading] = useState<string | null>(null);
 
   // API テスト関数
-  const testApi = async (endpoint: string, method: 'GET' | 'POST', body?: any, params?: string) => {
+  const testApi = async (endpoint: string, method: 'GET' | 'POST', body?: unknown, params?: string) => {
     const testKey = `${method} ${endpoint}`;
     setLoading(testKey);
     
@@ -181,7 +188,7 @@ export default function ApiTestPage() {
             {Object.entries(results).length === 0 ? (
               <p className="text-gray-500">上のボタンをクリックしてAPIをテストしてください</p>
             ) : (
-              Object.entries(results).reverse().map(([key, result]: [string, any]) => (
+              Object.entries(results).reverse().map(([key, result]: [string, ApiTestResult]) => (
                 <div key={key} className="bg-white p-4 rounded border">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold text-sm">{key}</span>

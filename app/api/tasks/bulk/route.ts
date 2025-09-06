@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
   try {
     // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
+    const _user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
     
     // const { data: { user } } = await supabase.auth.getUser();
     // if (!user) {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
+    const _user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
     
     // const { data: { user } } = await supabase.auth.getUser();
     // if (!user) {

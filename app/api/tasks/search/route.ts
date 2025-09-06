@@ -347,8 +347,13 @@ export async function POST(req: NextRequest) {
     }
 
     // ソート（複数カラム対応）
+    interface SortColumn {
+      column: string;
+      order: 'asc' | 'desc';
+    }
+    
     if (sorting.columns && Array.isArray(sorting.columns)) {
-      sorting.columns.forEach((sort: any) => {
+      sorting.columns.forEach((sort: SortColumn) => {
         const ascending = sort.order === 'asc';
         dbQuery = dbQuery.order(sort.column, { ascending });
       });
@@ -401,8 +406,18 @@ export async function POST(req: NextRequest) {
 }
 
 // ヘルパー関数: 適用されたフィルターを取得
-function getAppliedFilters(searchParams: URLSearchParams) {
-  const filters: any = {};
+interface AppliedFilters {
+  priority?: string | null;
+  completed?: string | null;
+  archived?: string | null;
+  team_id?: string | null;
+  assigned_to?: string | null;
+  date_from?: string | null;
+  date_to?: string | null;
+}
+
+function getAppliedFilters(searchParams: URLSearchParams): AppliedFilters {
+  const filters: AppliedFilters = {};
   
   if (searchParams.get('priority')) filters.priority = searchParams.get('priority');
   if (searchParams.get('completed')) filters.completed = searchParams.get('completed');
@@ -416,7 +431,16 @@ function getAppliedFilters(searchParams: URLSearchParams) {
 }
 
 // ヘルパー関数: 検索結果の分析
-function analyzeSearchResults(tasks: any[], query: string) {
+interface TaskSearchResult {
+  id: string;
+  text: string;
+  title?: string;
+  description?: string;
+  priority?: string;
+  completed?: boolean;
+}
+
+function analyzeSearchResults(tasks: TaskSearchResult[], query: string) {
   if (!tasks.length) return { match_quality: 0, insights: [] };
 
   const insights = [];
@@ -466,7 +490,14 @@ function analyzeSearchResults(tasks: any[], query: string) {
 }
 
 // ヘルパー関数: 検索の複雑さを計算
-function calculateSearchComplexity(searchBody: any) {
+interface SearchComplexityBody {
+  text_search?: { query?: string };
+  filters?: Record<string, unknown>;
+  date_ranges?: Record<string, unknown>;
+  sorting?: { columns?: unknown[] };
+}
+
+function calculateSearchComplexity(searchBody: SearchComplexityBody) {
   let complexity = 0;
   
   if (searchBody.text_search?.query) complexity += 1;

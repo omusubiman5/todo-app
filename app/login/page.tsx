@@ -46,7 +46,7 @@ function LoginContent() {
     router.replace(redirectTo);
   };
 
-  const handleLoginError = (error: AuthError) => {
+  const handleLoginError = (_error: AuthError) => {
     // The SecureLoginForm component handles error display
     // Clear URL message when showing auth error
     if (message) {

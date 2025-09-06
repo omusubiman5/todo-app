@@ -175,7 +175,7 @@ export class RPCService {
 
 // Reactフック用のカスタムフック
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthProvider';
+import { useAuth } from '@/components/AuthProvider';
 
 export const useTaskStatistics = () => {
   const { user } = useAuth();
