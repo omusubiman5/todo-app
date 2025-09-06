@@ -29,7 +29,16 @@
       "Read(C:\\Users\\omusu\\.claude/**)",
       "Bash(git checkout:*)",
       "Bash(npm update:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(node:*)",
+      "Bash(SKIP_ENV_VALIDATION=true npm run build)",
+      "Bash(npx @next/bundle-analyzer:*)",
+      "Bash(ANALYZE=true npm run build)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

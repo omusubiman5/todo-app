@@ -154,3 +154,21 @@ export interface WorkspaceContext {
   // Internal field for React change detection
   _switchedAt?: number;
 }
+
+// Pagination interfaces
+export interface PaginationOptions {
+  page?: number;
+  limit?: number;
+  status?: string;
+  priority?: string;
+  assigned_to?: string;
+  cursor?: string;
+}
+
+export interface PaginatedTasksResult {
+  tasks: SharedTask[];
+  hasMore: boolean;
+  totalCount: number;
+  nextCursor?: string;
+  currentPage: number;
+}

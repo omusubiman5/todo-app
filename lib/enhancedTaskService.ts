@@ -195,7 +195,7 @@ export class EnhancedTaskService {
     updates: Partial<EnhancedTask>,
     userId: string
   ): Promise<EnhancedTask> {
-    const updateData: unknown = { ...updates };
+    const updateData: any = { ...updates };
     
     // completed_atの自動設定
     if (updates.status === 'completed' && !updateData.completed_at) {
@@ -480,41 +480,42 @@ export class EnhancedTaskService {
    * タスクデータの正規化
    */
   private static normalizeTask(rawTask: unknown): EnhancedTask {
+    const task = rawTask as any; // Type assertion to access properties
     return {
-      id: rawTask.id,
-      title: rawTask.title,
-      description: rawTask.description,
-      status: rawTask.status,
-      priority: rawTask.priority,
-      user_id: rawTask.user_id,
-      team_id: rawTask.team_id,
-      assigned_to: rawTask.assigned_to,
-      created_by: rawTask.created_by,
-      due_date: rawTask.due_date,
-      completed_at: rawTask.completed_at,
-      created_at: rawTask.created_at,
-      updated_at: rawTask.updated_at,
-      custom_fields: rawTask.custom_fields || {},
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      user_id: task.user_id,
+      team_id: task.team_id,
+      assigned_to: task.assigned_to,
+      created_by: task.created_by,
+      due_date: task.due_date,
+      completed_at: task.completed_at,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+      custom_fields: task.custom_fields || {},
       
-      creator: rawTask.creator ? {
-        id: rawTask.creator.id,
-        email: rawTask.creator.email || 'unknown@example.com',
-        display_name: rawTask.creator.display_name || rawTask.creator.email || 'Unknown User'
+      creator: task.creator ? {
+        id: task.creator.id,
+        email: task.creator.email || 'unknown@example.com',
+        display_name: task.creator.display_name || task.creator.email || 'Unknown User'
       } : undefined,
       
-      assignee: rawTask.assignee ? {
-        id: rawTask.assignee.id,
-        email: rawTask.assignee.email || 'unknown@example.com',
-        display_name: rawTask.assignee.display_name || rawTask.assignee.email || 'Unknown User'
+      assignee: task.assignee ? {
+        id: task.assignee.id,
+        email: task.assignee.email || 'unknown@example.com',
+        display_name: task.assignee.display_name || task.assignee.email || 'Unknown User'
       } : null,
       
-      team: rawTask.team ? {
-        id: rawTask.team.id,
-        name: rawTask.team.name
+      team: task.team ? {
+        id: task.team.id,
+        name: task.team.name
       } : null,
       
-      comment_count: rawTask.comment_count || 0,
-      days_until_due: rawTask.days_until_due
+      comment_count: task.comment_count || 0,
+      days_until_due: task.days_until_due
     };
   }
 

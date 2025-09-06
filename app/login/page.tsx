@@ -27,8 +27,7 @@ function LoginContent() {
     // Monitor auth state for automatic redirect
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && event === 'SIGNED_IN') {
-        // Clear any errors on successful login
-        setAuthError(null);
+        // Clear any messages on successful login
         setMessage(null);
         
         // Redirect to intended page or home
@@ -48,7 +47,7 @@ function LoginContent() {
   };
 
   const handleLoginError = (error: AuthError) => {
-    setAuthError(error);
+    // The SecureLoginForm component handles error display
     // Clear URL message when showing auth error
     if (message) {
       setMessage(null);

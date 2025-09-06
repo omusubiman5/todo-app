@@ -1,9 +1,29 @@
 import { supabase } from './supabase';
-import { SharedTask, TaskComment, TaskHistory, Notification, WorkspaceContext } from './types';
+import { SharedTask, TaskComment, TaskHistory, Notification, WorkspaceContext, PaginationOptions, PaginatedTasksResult } from './types';
 
 export class SharedTaskService {
-  // タスク取得（個人 or チーム）
-  static async getTasks(workspace: WorkspaceContext, userId: string): Promise<SharedTask[]> {
+  // タスク取得（個人 or チーム）- 旧インターフェース
+  static async getTasks(workspace: WorkspaceContext, userId: string): Promise<SharedTask[]>;
+  
+  // タスク取得（ページング対応）- 新インターフェース
+  static async getTasks(workspace: WorkspaceContext, userId: string, options: PaginationOptions): Promise<PaginatedTasksResult>;
+  
+  // 実装
+  static async getTasks(
+    workspace: WorkspaceContext, 
+    userId: string, 
+    options?: PaginationOptions
+  ): Promise<SharedTask[] | PaginatedTasksResult> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 50;
+    const offset = (page - 1) * limit;
+
+    // Count query for pagination
+    let countQuery = supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true });
+
+    // Data query
     let query = supabase
       .from('tasks')
       .select(`
@@ -18,31 +38,63 @@ export class SharedTaskService {
         created_at, 
         updated_at
       `)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
+    // Apply workspace filtering to both queries
     if (workspace.type === 'personal') {
-      // 個人タスクの場合: user_idが一致し、team_idがnullまたは未設定
+      countQuery = countQuery.eq('user_id', userId).is('team_id', null);
       query = query.eq('user_id', userId).is('team_id', null);
       console.log('🔍 個人タスクフィルター適用:', { userId, workspace });
     } else if (workspace.type === 'team' && workspace.team_id) {
-      // チームタスクの場合: team_idが一致する
+      countQuery = countQuery.eq('team_id', workspace.team_id);
       query = query.eq('team_id', workspace.team_id);
       console.log('🔍 チームタスクフィルター適用:', { team_id: workspace.team_id, workspace });
     } else {
       console.warn('⚠️ 無効なワークスペース設定:', workspace);
       // 無効な場合は空の結果を返す
-      return [];
+      return options ? {
+        tasks: [],
+        hasMore: false,
+        totalCount: 0,
+        currentPage: page
+      } : [];
     }
 
-    const { data, error } = await query;
+    // Apply additional filters if provided
+    if (options?.status) {
+      const completed = options.status === 'completed';
+      countQuery = countQuery.eq('completed', completed);
+      query = query.eq('completed', completed);
+    }
+
+    if (options?.priority) {
+      countQuery = countQuery.eq('priority', options.priority);
+      query = query.eq('priority', options.priority);
+    }
+
+    if (options?.assigned_to) {
+      countQuery = countQuery.eq('assigned_to', options.assigned_to);
+      query = query.eq('assigned_to', options.assigned_to);
+    }
+
+    // Apply pagination only for paginated requests
+    if (options) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    // Execute queries
+    const [{ count, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query
+    ]);
+
     if (error) throw error;
-    
-    // 担当者・作成者情報を後から取得（簡易版）
+    if (countError) throw countError;
+
+    // Transform tasks
     const tasks = (data || []).map(task => ({
       ...task,
-      // textフィールドをそのまま使用（titleは存在しない）
       text: task.text,
-      // created_byが未設定の場合はuser_idで補完
       created_by: task.created_by || task.user_id,
       assignee: task.assigned_to ? { 
         id: task.assigned_to, 
@@ -55,6 +107,21 @@ export class SharedTaskService {
         user_metadata: { full_name: null, avatar_url: null }
       } : null
     }));
+
+    // Return based on whether pagination was requested
+    if (options) {
+      const totalCount = count || 0;
+      const hasMore = offset + limit < totalCount;
+      const nextCursor = hasMore ? `page-${page + 1}` : undefined;
+
+      return {
+        tasks,
+        hasMore,
+        totalCount,
+        nextCursor,
+        currentPage: page
+      };
+    }
 
     return tasks;
   }

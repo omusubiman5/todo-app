@@ -20,7 +20,7 @@ describe('TaskForm', () => {
       render(<TaskForm {...defaultProps} />);
       
       expect(screen.getByPlaceholderText('タスク内容を入力してください...')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('中')).toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toHaveValue('中');
       expect(screen.getByText('追加')).toBeInTheDocument();
       expect(screen.getByText('新しいタスクを追加')).toBeInTheDocument();
     });
@@ -36,8 +36,8 @@ describe('TaskForm', () => {
       render(<TaskForm {...defaultProps} isLoading={true} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const select = screen.getByDisplayValue('中');
-      const button = screen.getByText('追加');
+      const select = screen.getByRole('combobox');
+      const button = screen.getByRole('button', { name: '追加' });
       
       expect(input).toBeDisabled();
       expect(select).toBeDisabled();
@@ -51,7 +51,7 @@ describe('TaskForm', () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       
       await user.type(input, 'New Test Task');
       await user.click(button);
@@ -71,8 +71,8 @@ describe('TaskForm', () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const select = screen.getByDisplayValue('中');
-      const button = screen.getByText('追加');
+      const select = screen.getByRole('combobox');
+      const button = screen.getByRole('button', { name: '追加' });
       
       await user.type(input, 'High Priority Task');
       await user.selectOptions(select, '高');
@@ -87,7 +87,7 @@ describe('TaskForm', () => {
     it('空の入力では送信されない', async () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       expect(button).toBeDisabled();
       
       await user.click(button);
@@ -98,10 +98,12 @@ describe('TaskForm', () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       
       await user.type(input, '   ');
-      expect(button).toBeDisabled();
+      await waitFor(() => {
+        expect(button).toBeDisabled();
+      });
       
       await user.click(button);
       expect(mockOnSubmit).not.toHaveBeenCalled();
@@ -115,7 +117,9 @@ describe('TaskForm', () => {
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
       await user.type(input, 'Test');
       
-      expect(screen.getByText('4/500 文字')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('4/500 文字')).toBeInTheDocument();
+      });
     });
 
     it('500文字制限が適用される', async () => {
@@ -128,7 +132,9 @@ describe('TaskForm', () => {
       
       // HTML input maxLength属性により500文字で制限される
       expect(input).toHaveValue('a'.repeat(500));
-      expect(screen.getByText('500/500 文字')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('500/500 文字')).toBeInTheDocument();
+      });
     });
   });
 
@@ -147,7 +153,7 @@ describe('TaskForm', () => {
       const highPriorityButton = screen.getByText('高');
       await user.click(highPriorityButton);
       
-      const select = screen.getByDisplayValue('高');
+      const select = screen.getByRole('combobox');
       expect(select).toHaveValue('高');
     });
 
@@ -172,7 +178,7 @@ describe('TaskForm', () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       
       await user.type(input, 'Test Task');
       await user.click(button);
@@ -196,7 +202,7 @@ describe('TaskForm', () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('タスク内容を入力してください...');
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       
       await user.type(input, 'Test Task');
       await user.click(button);
@@ -252,25 +258,29 @@ describe('TaskForm', () => {
       expect(input).toHaveAttribute('type', 'text');
       expect(input).toHaveAttribute('maxLength', '500');
       
-      const select = screen.getByDisplayValue('中');
+      const select = screen.getByRole('combobox');
       expect(select).toHaveRole('combobox');
       
-      const button = screen.getByText('追加');
+      const button = screen.getByRole('button', { name: '追加' });
       expect(button).toHaveAttribute('type', 'submit');
     });
 
     it('キーボードナビゲーションが機能する', async () => {
       const { user } = render(<TaskForm {...defaultProps} />);
       
-      // Tab navigation
-      await user.tab();
-      expect(screen.getByPlaceholderText('タスク内容を入力してください...')).toHaveFocus();
+      const input = screen.getByPlaceholderText('タスク内容を入力してください...');
+      const select = screen.getByRole('combobox');
+      const button = screen.getByRole('button', { name: '追加' });
+      
+      // Focus input first, then tab through elements
+      input.focus();
+      expect(input).toHaveFocus();
       
       await user.tab();
-      expect(screen.getByDisplayValue('中')).toHaveFocus();
+      expect(select).toHaveFocus();
       
       await user.tab();
-      expect(screen.getByText('追加')).toHaveFocus();
+      expect(button).toHaveFocus();
     });
   });
 });

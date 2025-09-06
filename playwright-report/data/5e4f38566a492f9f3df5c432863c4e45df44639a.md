@@ -1,0 +1,383 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+      - img [ref=e8] [cursor=pointer]
+    - generic [ref=e13] [cursor=pointer]:
+      - button "Open issues overlay" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15] [cursor=pointer]:
+          - generic [ref=e16] [cursor=pointer]: "7"
+          - generic [ref=e17] [cursor=pointer]: "8"
+        - generic [ref=e18] [cursor=pointer]:
+          - text: Issue
+          - generic [ref=e19] [cursor=pointer]: s
+      - button "Collapse issues badge" [ref=e20] [cursor=pointer]:
+        - img [ref=e21] [cursor=pointer]
+  - alert [ref=e23]
+  - navigation [ref=e24]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - link "To-Do App" [ref=e28]:
+          - /url: /
+        - generic [ref=e29]:
+          - combobox [ref=e31]:
+            - option "👤 個人タスク" [selected]
+          - link "タスク" [ref=e32]:
+            - /url: /home
+          - link "チーム管理" [ref=e33]:
+            - /url: /teams
+          - link "統計" [ref=e34]:
+            - /url: /stats
+            - img [ref=e35]
+            - text: 統計
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: E
+          - generic [ref=e40]: e2e.test.user2@gmail.com
+        - button "ログアウト" [ref=e41]
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - generic "プロフィール設定へ" [ref=e46] [cursor=pointer]:
+        - img [ref=e49] [cursor=pointer]
+        - generic [ref=e51] [cursor=pointer]:
+          - paragraph [ref=e52] [cursor=pointer]: e2e.test.user2@gmail.com
+          - paragraph [ref=e53] [cursor=pointer]: こんにちは！
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - img [ref=e57]
+          - generic [ref=e59]: オンライン
+        - generic [ref=e60]:
+          - button "通知" [ref=e62]:
+            - img [ref=e63]
+          - button "ダークモード切替" [ref=e65]:
+            - img [ref=e66]
+          - link "パスワード変更" [ref=e68]:
+            - /url: /reset-password
+            - img [ref=e69]
+          - button "ログアウト" [ref=e71]:
+            - img [ref=e72]
+    - generic [ref=e74]:
+      - heading "🎯 やることリスト 🎯" [level=1] [ref=e75]
+      - paragraph [ref=e76]:
+        - text: 今日も頑張ろう！
+        - img [ref=e77]
+    - generic [ref=e79]:
+      - generic [ref=e81]:
+        - textbox "✨ やることを入力してね..." [ref=e82]
+        - combobox [ref=e83]:
+          - option "高"
+          - option "中" [selected]
+          - option "低"
+        - button "追加" [ref=e84]:
+          - img [ref=e85]
+          - text: 追加
+      - generic [ref=e87]:
+        - button "優先度でソート" [ref=e88]:
+          - img [ref=e89]
+          - text: 優先度でソート
+        - button "完了タスクを隠す" [ref=e91]:
+          - img [ref=e92]
+          - text: 完了タスクを隠す
+      - generic [ref=e94]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - checkbox [checked] [ref=e99] [cursor=pointer]
+                - generic [ref=e100]: 中
+              - generic [ref=e101]:
+                - button [ref=e102]:
+                  - img [ref=e103]
+                - button [ref=e105]:
+                  - img [ref=e106]
+            - generic "クリックで編集" [ref=e108] [cursor=pointer]: 📝 🤖 E2Eテストタスク - 14:42:04
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - checkbox [checked] [ref=e112] [cursor=pointer]
+                - generic [ref=e113]: 中
+              - generic [ref=e114]:
+                - button [ref=e115]:
+                  - img [ref=e116]
+                - button [ref=e118]:
+                  - img [ref=e119]
+            - generic "クリックで編集" [ref=e121] [cursor=pointer]: 📝 🤖 E2Eテストタスク - 14:42:25
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - checkbox [checked] [ref=e125] [cursor=pointer]
+                - generic [ref=e126]: 中
+              - generic [ref=e127]:
+                - button [ref=e128]:
+                  - img [ref=e129]
+                - button [ref=e131]:
+                  - img [ref=e132]
+            - generic "クリックで編集" [ref=e134] [cursor=pointer]: 📝 🔧 改良版テストタスク - 14:47:46
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - checkbox [ref=e138] [cursor=pointer]
+                - generic [ref=e139]: 中
+              - generic [ref=e140]:
+                - button [ref=e141]:
+                  - img [ref=e142]
+                - button [ref=e144]:
+                  - img [ref=e145]
+            - generic "クリックで編集" [ref=e147] [cursor=pointer]: 📝 ⚡ 高速テスト - 1757137693234
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - generic [ref=e150]:
+                - checkbox [ref=e151] [cursor=pointer]
+                - generic [ref=e152]: 中
+              - generic [ref=e153]:
+                - button [ref=e154]:
+                  - img [ref=e155]
+                - button [ref=e157]:
+                  - img [ref=e158]
+            - generic "クリックで編集" [ref=e160] [cursor=pointer]: 📝 🔧 改良版テストタスク - 14:48:04
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - generic [ref=e163]:
+                - checkbox [checked] [ref=e164] [cursor=pointer]
+                - generic [ref=e165]: 中
+              - generic [ref=e166]:
+                - button [ref=e167]:
+                  - img [ref=e168]
+                - button [ref=e170]:
+                  - img [ref=e171]
+            - generic "クリックで編集" [ref=e173] [cursor=pointer]: 📝 🔧 改良版テストタスク - 14:48:35
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - checkbox [ref=e177] [cursor=pointer]
+                - generic [ref=e178]: 中
+              - generic [ref=e179]:
+                - button [ref=e180]:
+                  - img [ref=e181]
+                - button [ref=e183]:
+                  - img [ref=e184]
+            - generic "クリックで編集" [ref=e186] [cursor=pointer]: 📝 ⚡ 高速テスト - 1757137717581
+          - generic [ref=e187]:
+            - generic [ref=e188]:
+              - generic [ref=e189]:
+                - checkbox [ref=e190] [cursor=pointer]
+                - generic [ref=e191]: 中
+              - generic [ref=e192]:
+                - button [ref=e193]:
+                  - img [ref=e194]
+                - button [ref=e196]:
+                  - img [ref=e197]
+            - generic "クリックで編集" [ref=e199] [cursor=pointer]: 📝 ⚡ パフォーマンステスト 1 - 1757138628250
+          - generic [ref=e200]:
+            - generic [ref=e201]:
+              - generic [ref=e202]:
+                - checkbox [ref=e203] [cursor=pointer]
+                - generic [ref=e204]: 中
+              - generic [ref=e205]:
+                - button [ref=e206]:
+                  - img [ref=e207]
+                - button [ref=e209]:
+                  - img [ref=e210]
+            - generic "クリックで編集" [ref=e212] [cursor=pointer]: 📝 📊 大量データテスト 01
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - checkbox [ref=e216] [cursor=pointer]
+                - generic [ref=e217]: 中
+              - generic [ref=e218]:
+                - button [ref=e219]:
+                  - img [ref=e220]
+                - button [ref=e222]:
+                  - img [ref=e223]
+            - generic "クリックで編集" [ref=e225] [cursor=pointer]: 📝 📊 大量データテスト 02
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - checkbox [ref=e229] [cursor=pointer]
+                - generic [ref=e230]: 中
+              - generic [ref=e231]:
+                - button [ref=e232]:
+                  - img [ref=e233]
+                - button [ref=e235]:
+                  - img [ref=e236]
+            - generic "クリックで編集" [ref=e238] [cursor=pointer]: 📝 📊 大量データテスト 03
+          - generic [ref=e239]:
+            - generic [ref=e240]:
+              - generic [ref=e241]:
+                - checkbox [ref=e242] [cursor=pointer]
+                - generic [ref=e243]: 中
+              - generic [ref=e244]:
+                - button [ref=e245]:
+                  - img [ref=e246]
+                - button [ref=e248]:
+                  - img [ref=e249]
+            - generic "クリックで編集" [ref=e251] [cursor=pointer]: 📝 📊 大量データテスト 04
+          - generic [ref=e252]:
+            - generic [ref=e253]:
+              - generic [ref=e254]:
+                - checkbox [ref=e255] [cursor=pointer]
+                - generic [ref=e256]: 中
+              - generic [ref=e257]:
+                - button [ref=e258]:
+                  - img [ref=e259]
+                - button [ref=e261]:
+                  - img [ref=e262]
+            - generic "クリックで編集" [ref=e264] [cursor=pointer]: 📝 📊 大量データテスト 05
+          - generic [ref=e265]:
+            - generic [ref=e266]:
+              - generic [ref=e267]:
+                - checkbox [ref=e268] [cursor=pointer]
+                - generic [ref=e269]: 中
+              - generic [ref=e270]:
+                - button [ref=e271]:
+                  - img [ref=e272]
+                - button [ref=e274]:
+                  - img [ref=e275]
+            - generic "クリックで編集" [ref=e277] [cursor=pointer]: 📝 📊 大量データテスト 06
+          - generic [ref=e278]:
+            - generic [ref=e279]:
+              - generic [ref=e280]:
+                - checkbox [ref=e281] [cursor=pointer]
+                - generic [ref=e282]: 中
+              - generic [ref=e283]:
+                - button [ref=e284]:
+                  - img [ref=e285]
+                - button [ref=e287]:
+                  - img [ref=e288]
+            - generic "クリックで編集" [ref=e290] [cursor=pointer]: 📝 📊 大量データテスト 07
+          - generic [ref=e291]:
+            - generic [ref=e292]:
+              - generic [ref=e293]:
+                - checkbox [ref=e294] [cursor=pointer]
+                - generic [ref=e295]: 中
+              - generic [ref=e296]:
+                - button [ref=e297]:
+                  - img [ref=e298]
+                - button [ref=e300]:
+                  - img [ref=e301]
+            - generic "クリックで編集" [ref=e303] [cursor=pointer]: 📝 📊 大量データテスト 08
+          - generic [ref=e304]:
+            - generic [ref=e305]:
+              - generic [ref=e306]:
+                - checkbox [ref=e307] [cursor=pointer]
+                - generic [ref=e308]: 中
+              - generic [ref=e309]:
+                - button [ref=e310]:
+                  - img [ref=e311]
+                - button [ref=e313]:
+                  - img [ref=e314]
+            - generic "クリックで編集" [ref=e316] [cursor=pointer]: 📝 📊 大量データテスト 09
+          - generic [ref=e317]:
+            - generic [ref=e318]:
+              - generic [ref=e319]:
+                - checkbox [ref=e320] [cursor=pointer]
+                - generic [ref=e321]: 中
+              - generic [ref=e322]:
+                - button [ref=e323]:
+                  - img [ref=e324]
+                - button [ref=e326]:
+                  - img [ref=e327]
+            - generic "クリックで編集" [ref=e329] [cursor=pointer]: 📝 📊 大量データテスト 10
+          - generic [ref=e330]:
+            - generic [ref=e331]:
+              - generic [ref=e332]:
+                - checkbox [ref=e333] [cursor=pointer]
+                - generic [ref=e334]: 中
+              - generic [ref=e335]:
+                - button [ref=e336]:
+                  - img [ref=e337]
+                - button [ref=e339]:
+                  - img [ref=e340]
+            - generic "クリックで編集" [ref=e342] [cursor=pointer]: 📝 🔄 チェックボックステスト - 1757138659197
+          - generic [ref=e343]:
+            - generic [ref=e344]:
+              - generic [ref=e345]:
+                - checkbox [ref=e346] [cursor=pointer]
+                - generic [ref=e347]: 中
+              - generic [ref=e348]:
+                - button [ref=e349]:
+                  - img [ref=e350]
+                - button [ref=e352]:
+                  - img [ref=e353]
+            - generic "クリックで編集" [ref=e355] [cursor=pointer]: 📝 ⚡ 高速テスト - 1757138738775
+          - generic [ref=e356]:
+            - generic [ref=e357]:
+              - generic [ref=e358]:
+                - checkbox [ref=e359] [cursor=pointer]
+                - generic [ref=e360]: 中
+              - generic [ref=e361]:
+                - button [ref=e362]:
+                  - img [ref=e363]
+                - button [ref=e365]:
+                  - img [ref=e366]
+            - generic "クリックで編集" [ref=e368] [cursor=pointer]: 📝 ⚡ 高速テスト - 1757138761071
+          - generic [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]:
+                - checkbox [ref=e372] [cursor=pointer]
+                - generic [ref=e373]: 中
+              - generic [ref=e374]:
+                - button [ref=e375]:
+                  - img [ref=e376]
+                - button [ref=e378]:
+                  - img [ref=e379]
+            - generic "クリックで編集" [ref=e381] [cursor=pointer]: 📝 ⚡ 高速テスト - 1757138775702
+          - generic [ref=e382]:
+            - generic [ref=e383]:
+              - generic [ref=e384]:
+                - checkbox [checked] [ref=e385] [cursor=pointer]
+                - generic [ref=e386]: 中
+              - generic [ref=e387]:
+                - button [ref=e388]:
+                  - img [ref=e389]
+                - button [ref=e391]:
+                  - img [ref=e392]
+            - generic "クリックで編集" [ref=e394] [cursor=pointer]: 📝 🔧 改良版テストタスク - 15:06:23
+          - generic [ref=e395]:
+            - generic [ref=e396]:
+              - generic [ref=e397]:
+                - checkbox [ref=e398] [cursor=pointer]
+                - generic [ref=e399]: 中
+              - generic [ref=e400]:
+                - button [ref=e401]:
+                  - img [ref=e402]
+                - button [ref=e404]:
+                  - img [ref=e405]
+            - generic "クリックで編集" [ref=e407] [cursor=pointer]: 📝 📊 ベンチマークタスク - 1757138931367
+          - generic [ref=e408]:
+            - generic [ref=e409]:
+              - generic [ref=e410]:
+                - checkbox [ref=e411] [cursor=pointer]
+                - generic [ref=e412]: 中
+              - generic [ref=e413]:
+                - button [ref=e414]:
+                  - img [ref=e415]
+                - button [ref=e417]:
+                  - img [ref=e418]
+            - generic "クリックで編集" [ref=e420] [cursor=pointer]: 📝 📊 ベンチマークタスク - 1757138945151
+          - generic [ref=e421]:
+            - generic [ref=e422]:
+              - generic [ref=e423]:
+                - checkbox [ref=e424] [cursor=pointer]
+                - generic [ref=e425]: 中
+              - generic [ref=e426]:
+                - button [ref=e427]:
+                  - img [ref=e428]
+                - button [ref=e430]:
+                  - img [ref=e431]
+            - generic "クリックで編集" [ref=e433] [cursor=pointer]: 📝 📊 ベンチマークタスク - 1757139768772
+          - generic [ref=e434]:
+            - generic [ref=e435]:
+              - generic [ref=e436]:
+                - checkbox [ref=e437] [cursor=pointer]
+                - generic [ref=e438]: 中
+              - generic [ref=e439]:
+                - button [ref=e440]:
+                  - img [ref=e441]
+                - button [ref=e443]:
+                  - img [ref=e444]
+            - generic "クリックで編集" [ref=e446] [cursor=pointer]: 📝 📊 ベンチマークタスク - 1757139784561
+        - generic [ref=e447]: "最終同期: 3:23:06 PM"
+```
