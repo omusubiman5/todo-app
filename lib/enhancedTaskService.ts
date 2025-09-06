@@ -480,7 +480,7 @@ export class EnhancedTaskService {
    * タスクデータの正規化
    */
   private static normalizeTask(rawTask: unknown): EnhancedTask {
-    const task = rawTask as Record<string, any>; // Type assertion to access properties
+    const task = rawTask as Record<string, unknown>; // Type assertion to access properties
     return {
       id: task.id,
       title: task.title,

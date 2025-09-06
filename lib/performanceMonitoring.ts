@@ -131,7 +131,7 @@ class PerformanceMonitoring {
       let clsValue = 0;
       const clsObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry: PerformanceEntry) => {
-          const layoutShiftEntry = entry as any; // Layout shift entries have additional properties
+          const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }; // Layout shift entries have additional properties
           if (!layoutShiftEntry.hadRecentInput) {
             clsValue += layoutShiftEntry.value || 0;
           }
@@ -248,7 +248,7 @@ class PerformanceMonitoring {
         metadata: {
           effectiveType: connection?.effectiveType,
           rtt: connection?.rtt,
-          saveData: (connection as any)?.saveData
+          saveData: (connection as NetworkInformation & { saveData?: boolean })?.saveData
         }
       });
 
@@ -263,7 +263,7 @@ class PerformanceMonitoring {
             metadata: {
               effectiveType: connection?.effectiveType,
               rtt: connection?.rtt,
-              saveData: (connection as any)?.saveData
+              saveData: (connection as NetworkInformation & { saveData?: boolean })?.saveData
             }
           });
         });
