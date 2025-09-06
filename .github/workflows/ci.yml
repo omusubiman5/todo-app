@@ -1,0 +1,134 @@
+name: 🚀 CI/CD Pipeline - Test & Deploy
+
+# トリガー条件：プッシュとプルリクエスト時に実行
+on:
+  push:
+    branches: [ main, develop, hotfix/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+# 環境変数の設定
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+# ジョブの定義
+jobs:
+  # 🧪 テスト・品質チェックジョブ
+  test-and-lint:
+    name: 🧪 Tests & Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1️⃣ コードをチェックアウト
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+        
+      # 2️⃣ Node.js環境のセットアップ
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      # 3️⃣ 依存関係のインストール
+      - name: 📥 Install Dependencies
+        run: npm ci
+        
+      # 4️⃣ TypeScript型チェック
+      - name: 🔍 TypeScript Check
+        run: npm run type-check
+        continue-on-error: false
+        
+      # 5️⃣ ESLint実行
+      - name: 🧹 ESLint Check
+        run: npm run lint
+        continue-on-error: false
+        
+      # 6️⃣ 単体テスト実行
+      - name: 🧪 Run Unit Tests
+        run: npm run test -- --coverage --watchAll=false
+        env:
+          CI: true
+          
+      # 7️⃣ ビルドテスト
+      - name: 🏗️ Build Test
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: true
+          
+      # 8️⃣ Playwright E2Eテスト（Chromiumのみ）
+      - name: 🎭 E2E Tests
+        run: |
+          npx playwright install chromium
+          npm run test:e2e -- --project=chromium
+        env:
+          CI: true
+
+  # 🚢 デプロイジョブ（テスト成功後のみ）
+  deploy:
+    name: 🚢 Deploy to Vercel
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    # mainブランチへのプッシュ時のみデプロイ
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      # 1️⃣ コードをチェックアウト
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+        
+      # 2️⃣ Node.js環境のセットアップ
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      # 3️⃣ 依存関係のインストール
+      - name: 📥 Install Dependencies
+        run: npm ci
+        
+      # 4️⃣ Vercelへのデプロイ
+      - name: 🚀 Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-args: '--prod'
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+
+  # 📊 パフォーマンステスト（オプション）
+  performance-test:
+    name: 📊 Performance Tests
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📥 Install Dependencies
+        run: npm ci
+        
+      - name: 🏗️ Build Application
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: true
+          
+      - name: 📊 Run Performance Tests
+        run: |
+          npm run dev &
+          sleep 30
+          npx playwright test tests/performance-benchmark.spec.js --project=chromium
+        env:
+          CI: true
