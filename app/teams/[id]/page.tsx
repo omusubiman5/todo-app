@@ -434,7 +434,7 @@ export default function TeamDetailPage() {
         </div>
         
         <div className="text-sm text-white/70">
-          作成日: {new Date(team.created_at).toLocaleDateString('ja-JP')} | 
+          作成日: {team.created_at ? new Date(team.created_at).toLocaleDateString('ja-JP') : '不明'} | 
           メンバー数: {team.member_count}人
         </div>
         </div>
@@ -464,7 +464,7 @@ export default function TeamDetailPage() {
                     {member.user?.user_metadata?.full_name || member.user?.email}
                   </div>
                   <div className="text-sm text-white/70">
-                    参加日: {new Date(member.joined_at).toLocaleDateString('ja-JP')}
+                    参加日: {member.joined_at ? new Date(member.joined_at).toLocaleDateString('ja-JP') : '不明'}
                   </div>
                 </div>
               </div>
@@ -514,8 +514,8 @@ export default function TeamDetailPage() {
                     <div>
                       <div className="font-medium text-white">{invitation.email}</div>
                       <div className="text-sm text-white/70">
-                        招待日: {new Date(invitation.created_at).toLocaleDateString('ja-JP')} | 
-                        有効期限: {new Date(invitation.expires_at).toLocaleDateString('ja-JP')}
+                        招待日: {invitation.created_at ? new Date(invitation.created_at).toLocaleDateString('ja-JP') : '不明'} | 
+                        有効期限: {invitation.expires_at ? new Date(invitation.expires_at).toLocaleDateString('ja-JP') : '不明'}
                       </div>
                     </div>
                   </div>

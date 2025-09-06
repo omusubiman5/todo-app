@@ -147,7 +147,7 @@ export default function TeamStatsDashboard({ darkMode = false }: TeamStatsDashbo
         const teamActivity = Array.from({ length: 7 }, (_, i) => {
           const date = new Date();
           date.setDate(date.getDate() - (6 - i));
-          const dateStr = date.toLocaleDateString('ja-JP', { month: 'M', day: 'd' });
+          const dateStr = date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
           
           return {
             date: dateStr,
