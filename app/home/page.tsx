@@ -1,16 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { FaRocket, FaMoon, FaSun, FaWifi, FaExclamationTriangle, FaUser, FaSignOutAlt, FaKey } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import Navigation from "@/components/Navigation";
-import SharedTaskBoard from "@/components/SharedTaskBoard";
-import NotificationCenter from "@/components/NotificationCenter";
+
+// 動的インポートでコード分割
+const SharedTaskBoard = dynamic(() => import("@/components/SharedTaskBoard"), {
+  loading: () => <div className="flex items-center justify-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+    <span className="ml-3 text-white">タスクボードを読み込み中...</span>
+  </div>,
+  ssr: false
+});
+
+const NotificationCenter = dynamic(() => import("@/components/NotificationCenter"), {
+  loading: () => <div className="animate-pulse w-12 h-12 bg-white/20 rounded-full"></div>,
+  ssr: false
+});
 
 const DARK_MODE_KEY = 'todo-app-dark-mode';
 
@@ -271,7 +284,16 @@ export default function Home() {
         </div>
 
         {/* 共有タスクボード */}
-        <SharedTaskBoard darkMode={darkMode} />
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-white text-lg">タスクボードを読み込み中...</p>
+            </div>
+          </div>
+        }>
+          <SharedTaskBoard darkMode={darkMode} />
+        </Suspense>
       </div>
     </div>
     </>
