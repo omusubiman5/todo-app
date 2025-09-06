@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface ApiTestResult {
-  status: number;
+  status: number | string;
   data: unknown;
   error?: string;
   timestamp: string;
@@ -26,7 +26,7 @@ export default function ApiTestPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        ...(body && { body: JSON.stringify(body) })
+        ...(body ? { body: JSON.stringify(body) } : {})
       });
 
       const data = await response.json();
@@ -196,7 +196,7 @@ export default function ApiTestPage() {
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         result.status === 200 || result.status === 201 
                           ? 'bg-green-100 text-green-800' 
-                          : result.status >= 400 
+                          : (typeof result.status === 'number' && result.status >= 400) || result.status === 'ERROR'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
                       }`}>

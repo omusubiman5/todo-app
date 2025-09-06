@@ -69,7 +69,8 @@ function ResetPasswordContent() {
             setAuthError({
               code: 'recovery_failed',
               userMessage: 'パスワードリセットトークンが無効または期限切れです。新しいリセットリンクを要求してください。',
-              technicalMessage: error.message
+              message: error.message,
+              severity: 'error'
             });
             setIsReady(true);
             return;
@@ -98,7 +99,8 @@ function ResetPasswordContent() {
         setAuthError({
           code: 'no_recovery_token',
           userMessage: 'パスワードリセットリンクが無効です。ログインしてからアクセスするか、新しいリセットメールを要求してください。',
-          technicalMessage: 'No valid recovery tokens found'
+          message: 'No valid recovery tokens found',
+          severity: 'error'
         });
         setIsReady(true);
         
@@ -107,7 +109,8 @@ function ResetPasswordContent() {
         setAuthError({
           code: 'recovery_failed',
           userMessage: 'パスワードリセット処理中にエラーが発生しました。',
-          technicalMessage: error instanceof Error ? error.message : 'Unknown error'
+          message: error instanceof Error ? error.message : 'Unknown error',
+          severity: 'error'
         });
         setIsReady(true);
       }

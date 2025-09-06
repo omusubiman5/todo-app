@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAdvancedTaskSearch } from '@/lib/rpcService';
-import { useWorkspace } from '@/contexts/WorkspaceProvider';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

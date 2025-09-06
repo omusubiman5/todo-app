@@ -210,11 +210,11 @@ function exportAsCSV(tasks: Array<Record<string, unknown>>) {
     headers.join(','),
     ...tasks.map(task => [
       task.id,
-      `"${(task.text || '').replace(/"/g, '""')}"`, // CSVエスケープ
+      `"${((task as Record<string, unknown>).text || '').toString().replace(/"/g, '""')}"`, // CSVエスケープ
       task.priority || '',
       task.completed ? '完了' : '未完了',
-      formatDateForCSV(task.created_at),
-      formatDateForCSV(task.updated_at),
+      formatDateForCSV((task as Record<string, unknown>).created_at as string | null),
+      formatDateForCSV((task as Record<string, unknown>).updated_at as string | null),
       task.team_id || ''
     ].join(','))
   ];
@@ -248,8 +248,8 @@ function exportAsJSON(tasks: Array<Record<string, unknown>>) {
       updated_at: task.updated_at,
       team_id: task.team_id,
       // 追加の計算フィールド
-      days_since_created: task.created_at 
-        ? Math.floor((Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      days_since_created: (task as Record<string, unknown>).created_at 
+        ? Math.floor((Date.now() - new Date((task as Record<string, unknown>).created_at as string).getTime()) / (1000 * 60 * 60 * 24))
         : null
       // completion_time_hours: completed_atカラムが存在しないため削除
     }))

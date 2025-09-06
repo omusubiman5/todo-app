@@ -507,7 +507,7 @@ function calculateSearchComplexity(searchBody: SearchComplexityBody) {
   if (searchBody.date_ranges && Object.keys(searchBody.date_ranges).length > 0) {
     complexity += Object.keys(searchBody.date_ranges).length * 2;
   }
-  if (searchBody.sorting?.columns?.length > 1) complexity += 1;
+  if (searchBody.sorting?.columns && searchBody.sorting.columns.length > 1) complexity += 1;
   
   return complexity;
 }

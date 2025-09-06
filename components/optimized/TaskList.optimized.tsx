@@ -1,8 +1,7 @@
-// 🚀 仮想化対応の最適化されたTaskListコンポーネント
+// 🚀 最適化されたTaskListコンポーネント
 "use client";
 
-import React, { memo, useMemo, useState, useCallback } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import React, { memo, useMemo, useCallback } from 'react';
 import { SharedTask } from '@/lib/types';
 import TaskItem from './TaskItem.optimized';
 
@@ -55,42 +54,6 @@ const TaskList = memo<TaskListProps>(({
     return filteredTasks;
   }, [tasks, hideCompleted, sortByPriority]);
 
-  // 仮想化設定
-  const ITEM_HEIGHT = 120; // タスクアイテムの高さ
-  const LIST_HEIGHT = Math.min(600, processedTasks.length * ITEM_HEIGHT); // 最大600px
-
-  // 仮想化用のRowコンポーネント
-  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const task = processedTasks[index];
-    if (!task) return null;
-
-    return (
-      <div style={style}>
-        <div className="px-2 pb-4">
-          <TaskItem
-            task={task}
-            onUpdate={onTaskUpdate}
-            onDelete={onTaskDelete}
-            onEdit={onTaskEdit}
-            onAssign={onTaskAssign}
-            onComment={onTaskComment}
-            onHistory={onTaskHistory}
-            darkMode={darkMode}
-            index={index}
-          />
-        </div>
-      </div>
-    );
-  }, [
-    processedTasks,
-    onTaskUpdate,
-    onTaskDelete,
-    onTaskEdit,
-    onTaskAssign,
-    onTaskComment,
-    onTaskHistory,
-    darkMode
-  ]);
 
   // 通常表示（少数のタスク）
   const renderNormalList = useCallback(() => {
@@ -124,21 +87,6 @@ const TaskList = memo<TaskListProps>(({
     className
   ]);
 
-  // 仮想化表示（大量のタスク）
-  const renderVirtualizedList = useCallback(() => {
-    return (
-      <div className={className} role="list">
-        <List
-          height={LIST_HEIGHT}
-          itemCount={processedTasks.length}
-          itemSize={ITEM_HEIGHT}
-          width="100%"
-        >
-          {Row}
-        </List>
-      </div>
-    );
-  }, [LIST_HEIGHT, processedTasks.length, Row, className]);
 
   // 空状態の表示
   if (processedTasks.length === 0) {
@@ -161,9 +109,6 @@ const TaskList = memo<TaskListProps>(({
     );
   }
 
-  // パフォーマンス最適化: 20個以上のタスクで仮想化を使用
-  const useVirtualization = processedTasks.length > 20;
-
   return (
     <div className="task-list-container">
       {/* タスク数の表示 */}
@@ -180,7 +125,7 @@ const TaskList = memo<TaskListProps>(({
       </div>
 
       {/* タスクリスト */}
-      {useVirtualization ? renderVirtualizedList() : renderNormalList()}
+      {renderNormalList()}
     </div>
   );
 });

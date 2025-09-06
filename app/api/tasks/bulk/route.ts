@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
           .from('tasks')
           .delete()
           .in('id', task_ids)
-          .eq('user_id', user.id);
+          .eq('user_id', _user.id);
 
         if (deleteError) throw deleteError;
         
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString()
           })
           .in('id', task_ids)
-          .eq('user_id', user.id)
+          .eq('user_id', _user.id)
           .select();
 
         if (updateError) throw updateError;
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString()
           })
           .in('id', task_ids)
-          .eq('user_id', user.id)
+          .eq('user_id', _user.id)
           .select();
 
         if (completeError) throw completeError;
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
           .from('tasks')
           .delete()
           .in('id', task_ids)
-          .eq('user_id', user.id);
+          .eq('user_id', _user.id);
 
         if (archiveError) throw archiveError;
         

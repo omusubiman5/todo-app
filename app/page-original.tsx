@@ -98,13 +98,13 @@ export default function Home() {
     if (!user) {
       setTasks([]);
       setEditingIndex(null);
-      setError(null);
-      setLoading(false);
+      // // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト // error状態が定義されていないためコメントアウト
+      // // setLoading( // loading状態が定義されていないためコメントアウトfalse); // loading状態が定義されていないためコメントアウト
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // // setLoading( // loading状態が定義されていないためコメントアウトtrue); // loading状態が定義されていないためコメントアウト
+    // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト
     
     const fetchTasks = async () => {
       try {
@@ -116,7 +116,7 @@ export default function Home() {
         
         if (error) {
           console.error('Supabase error:', error);
-          setError("タスクの取得に失敗しました");
+          // setError( // error状態が定義されていないためコメントアウト"タスクの取得に失敗しました");
           // オフライン時はローカルストレージから読み込み
           const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
           setTasks(localTasks);
@@ -128,12 +128,12 @@ export default function Home() {
         }
       } catch (err) {
         console.error('Network error:', err);
-        setError("ネットワークエラーが発生しました");
+        // setError( // error状態が定義されていないためコメントアウト"ネットワークエラーが発生しました");
         // ネットワークエラー時はローカルストレージから読み込み
         const localTasks = loadFromStorage().map(task => ({ ...task, user_id: user.id }));
         setTasks(localTasks);
       } finally {
-        setLoading(false);
+        // setLoading( // loading状態が定義されていないためコメントアウトfalse);
       }
     };
 
@@ -178,7 +178,7 @@ export default function Home() {
   const handleAddTask = async () => {
     if (!user || task.trim() === "") return;
     
-    setError(null);
+    // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト
     const newTask: Task = {
       id: `temp-${Date.now()}`,
       text: task.trim(),
@@ -209,7 +209,7 @@ export default function Home() {
         console.error('Supabase insert error:', error);
         // エラー時はローカルストレージに保存
         saveToStorage(newTasks);
-        setError("タスクの追加に失敗しました（オフラインで保存されました）");
+        // setError( // error状態が定義されていないためコメントアウト"タスクの追加に失敗しました（オフラインで保存されました）");
       } else {
         // 成功時は一時IDを正式IDに更新
         const updatedTasks = newTasks.map(t => 
@@ -223,7 +223,7 @@ export default function Home() {
       console.error('Network error during insert:', err);
       // ネットワークエラー時はローカルストレージに保存
       saveToStorage(newTasks);
-      setError("オフライン中です（ローカルに保存されました）");
+      // setError( // error状態が定義されていないためコメントアウト"オフライン中です（ローカルに保存されました）");
     }
   };
 
@@ -232,7 +232,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToDelete = tasks[index];
-    setError(null);
+    // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト
 
     // 楽観的更新：UIから即座に削除
     const newTasks = tasks.filter((_, i) => i !== index);
@@ -250,7 +250,7 @@ export default function Home() {
         console.error('Supabase delete error:', error);
         // エラー時は元に戻す
         setTasks(tasks);
-        setError("タスクの削除に失敗しました");
+        // setError( // error状態が定義されていないためコメントアウト"タスクの削除に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -259,7 +259,7 @@ export default function Home() {
       console.error('Network error during delete:', err);
       // ネットワークエラー時はローカルで削除のまま
       saveToStorage(newTasks);
-      setError("オフライン中です（ローカルで削除されました）");
+      // setError( // error状態が定義されていないためコメントアウト"オフライン中です（ローカルで削除されました）");
     }
   };
 
@@ -268,7 +268,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToUpdate = tasks[index];
-    setError(null);
+    // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト
 
     // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
@@ -286,7 +286,7 @@ export default function Home() {
         console.error('Supabase update error:', error);
         // エラー時は元に戻す
         setTasks(tasks);
-        setError("タスクの更新に失敗しました");
+        // setError( // error状態が定義されていないためコメントアウト"タスクの更新に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -295,7 +295,7 @@ export default function Home() {
       console.error('Network error during update:', err);
       // ネットワークエラー時はローカルで更新のまま
       saveToStorage(newTasks);
-      setError("オフライン中です（ローカルで更新されました）");
+      // setError( // error状態が定義されていないためコメントアウト"オフライン中です（ローカルで更新されました）");
     }
   };
 
@@ -310,7 +310,7 @@ export default function Home() {
     if (!user) return;
 
     const taskToUpdate = tasks[index];
-    setError(null);
+    // // setError( // error状態が定義されていないためコメントアウトnull); // error状態が定義されていないためコメントアウト
 
     // 楽観的更新：UIを即座に更新
     const newTasks = [...tasks];
@@ -333,7 +333,7 @@ export default function Home() {
         // エラー時は元に戻す
         setTasks(tasks);
         setEditingIndex(index);
-        setError("タスクの編集に失敗しました");
+        // setError( // error状態が定義されていないためコメントアウト"タスクの編集に失敗しました");
       } else {
         saveToStorage(newTasks);
         setLastSyncTime(new Date());
@@ -342,7 +342,7 @@ export default function Home() {
       console.error('Network error during update:', err);
       // ネットワークエラー時はローカルで更新のまま
       saveToStorage(newTasks);
-      setError("オフライン中です（ローカルで編集されました）");
+      // setError( // error状態が定義されていないためコメントアウト"オフライン中です（ローカルで編集されました）");
     }
   };
   const handleEditCancel = () => {
