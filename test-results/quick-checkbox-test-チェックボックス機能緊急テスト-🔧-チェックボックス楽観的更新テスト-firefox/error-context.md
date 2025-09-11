@@ -1,0 +1,60 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+      - img [ref=e8] [cursor=pointer]
+    - generic [ref=e12] [cursor=pointer]:
+      - button "Open issues overlay" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14] [cursor=pointer]:
+          - generic [ref=e15] [cursor=pointer]: "4"
+          - generic [ref=e16] [cursor=pointer]: "5"
+        - generic [ref=e17] [cursor=pointer]:
+          - text: Issue
+          - generic [ref=e18] [cursor=pointer]: s
+      - button "Collapse issues badge" [ref=e19] [cursor=pointer]:
+        - img [ref=e20] [cursor=pointer]
+  - alert [ref=e22]
+  - generic [ref=e24]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - img [ref=e29]
+          - heading "ログイン" [level=1] [ref=e31]
+        - paragraph [ref=e32]: セキュアな認証システム
+      - generic [ref=e34]:
+        - img [ref=e35]
+        - generic [ref=e37]:
+          - paragraph [ref=e38]: エラー
+          - paragraph [ref=e39]: メールアドレスまたはパスワードが正しくありません。
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: メールアドレス
+          - textbox "メールアドレス" [ref=e43]: e2e.test.user2@gmail.com
+        - generic [ref=e44]:
+          - generic [ref=e45]: パスワード
+          - generic [ref=e46]:
+            - textbox "パスワード" [ref=e47]: test123456
+            - button "パスワードを表示" [ref=e48]:
+              - img [ref=e49]
+        - button "ログイン" [ref=e51]:
+          - img [ref=e52]
+          - text: ログイン
+      - button "パスワードを忘れた場合" [ref=e55]:
+        - img [ref=e56]
+        - text: パスワードを忘れた場合
+      - button "アカウントをお持ちでない方は新規登録" [ref=e59]
+      - paragraph [ref=e61]:
+        - img [ref=e62]
+        - text: あなたの情報は暗号化されて保護されています
+    - generic [ref=e65]:
+      - img [ref=e66]
+      - generic [ref=e68]:
+        - paragraph [ref=e69]: セキュリティ機能
+        - list [ref=e70]:
+          - listitem [ref=e71]: • レート制限による不正アクセス防止
+          - listitem [ref=e72]: • エンドツーエンド暗号化
+          - listitem [ref=e73]: • セッション自動管理
+          - listitem [ref=e74]: • セキュアなエラーハンドリング
+```

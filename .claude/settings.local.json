@@ -38,7 +38,10 @@
       "Bash(ANALYZE=true npm run build)",
       "Bash(npm run type-check:*)",
       "Bash(npm cache clean:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npm run e2e:headed:*)",
+      "Bash(npm run e2e:report:*)"
     ],
     "deny": []
   }

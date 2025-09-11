@@ -231,17 +231,30 @@ export default function SharedTaskBoard({ darkMode = false }: SharedTaskBoardPro
     }
   };
 
-  // タスク完了トグル
+  // タスク完了トグル（楽観的更新）
   const handleToggleTask = async (index: number) => {
     const taskToUpdate = tasks[index];
     
+    // 🔧 楽観的更新: 即座にUIを更新
+    const optimisticUpdate = {
+      ...taskToUpdate,
+      completed: !taskToUpdate.completed
+    };
+    
+    setTasks(prev => prev.map((t, i) => i === index ? optimisticUpdate : t));
+    
     try {
+      // バックグラウンドでDB更新
       const updatedTask = await SharedTaskService.updateTask(taskToUpdate.id, {
         completed: !taskToUpdate.completed
       });
+      
+      // 成功時は正確なデータで更新
       setTasks(prev => prev.map((t, i) => i === index ? updatedTask : t));
       setLastSyncTime(new Date());
     } catch (error) {
+      // エラー時は元の状態にロールバック
+      setTasks(prev => prev.map((t, i) => i === index ? taskToUpdate : t));
       console.error('Failed to toggle task:', error);
     }
   };

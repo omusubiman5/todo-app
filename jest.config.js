@@ -46,10 +46,13 @@ const customJestConfig = {
     }
   },
   
-  // モックファイルの場所を指定
-  moduleNameMapping: {
+  // モジュール名のマッピングを指定
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  
+  // Next.js の .next ディレクトリを除外
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   
   // テスト実行前の設定
   verbose: true,
