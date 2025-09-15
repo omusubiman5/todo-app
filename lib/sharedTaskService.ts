@@ -83,13 +83,34 @@ export class SharedTaskService {
     }
 
     // Execute queries
+    console.log('🔄 SQLクエリ実行開始...', {
+      workspace,
+      userId,
+      queryFilters: workspace.type === 'personal' ? 
+        `user_id=${userId}, team_id=null` : 
+        `team_id=${workspace.team_id}`
+    });
+    
     const [{ count, error: countError }, { data, error }] = await Promise.all([
       countQuery,
       query
     ]);
 
-    if (error) throw error;
-    if (countError) throw countError;
+    console.log('📊 SQLクエリ実行結果:', { 
+      dataCount: data?.length || 0, 
+      error: error?.message || null, 
+      count, 
+      countError: countError?.message || null 
+    });
+
+    if (error) {
+      console.error('🚨 データクエリエラー詳細:', error);
+      throw error;
+    }
+    if (countError) {
+      console.error('🚨 カウントクエリエラー詳細:', countError);
+      throw countError;
+    }
 
     // Transform tasks
     const tasks = (data || []).map(task => ({
@@ -301,69 +322,111 @@ export class SharedTaskService {
       throw new Error('このタスクを削除する権限がありません');
     }
 
-    // 関連データの事前削除（外部キー制約を回避）
-    console.log('🗑️ タスク削除開始（関連データから削除）');
+    // シンプルな削除アプローチ（CASCADE設定を前提）
+    console.log('🗑️ タスク削除開始（シンプル削除）');
     
     try {
-      // 関連データを先に削除
-      console.log('🧹 関連データ削除開始:', { taskId });
+      // まずタスクの存在確認
+      const { data: existingTask } = await supabase
+        .from('tasks')
+        .select('id, text')
+        .eq('id', taskId)
+        .single();
       
-      // 1. コメントを削除
+      if (!existingTask) {
+        console.log('⚠️ タスクが既に削除済みまたは存在しません:', taskId);
+        return; // エラーではなく正常終了
+      }
+      
+      console.log('🎯 削除対象タスク確認完了:', { taskId, taskText: existingTask.text });
+      
+      // Supabaseのトランザクション内で削除（関連データは自動削除されるはず）
+      console.log('🗑️ メインタスク削除実行:', { taskId });
+      const { data, error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .select();
+
+      console.log('🗑️ SharedTaskService.deleteTask 結果:', { data, error, taskId });
+
+      if (error) {
+        console.error('❌ SharedTaskService.deleteTask エラー:', error);
+        
+        // エラーコード23503は外部キー制約違反
+        if (error.code === '23503') {
+          console.log('🔧 外部キー制約エラーを検出。関連データを先に削除します。');
+          
+          // 関連データを先に削除してリトライ
+          await this.deleteRelatedDataFirst(taskId);
+          
+          // 再度メインタスクを削除
+          const { data: retryData, error: retryError } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', taskId)
+            .select();
+            
+          if (retryError) {
+            console.error('❌ リトライ後もタスク削除失敗:', retryError);
+            throw retryError;
+          }
+          
+          console.log('✅ リトライでタスク削除成功:', { deletedData: retryData, taskId });
+          return;
+        }
+        
+        throw error;
+      }
+      
+      console.log('✅ SharedTaskService.deleteTask 成功:', { deletedData: data, taskId });
+      
+    } catch (deleteError) {
+      console.error('❌ タスク削除処理でエラー:', deleteError);
+      throw deleteError;
+    }
+  }
+
+  // 関連データの手動削除メソッド
+  private static async deleteRelatedDataFirst(taskId: string): Promise<void> {
+    console.log('🧹 関連データの手動削除開始:', { taskId });
+    
+    try {
+      // 1. コメント削除
       const { error: commentsError } = await supabase
         .from('task_comments')
         .delete()
         .eq('task_id', taskId);
       
-      if (commentsError && commentsError.code !== 'PGRST116') { // PGRST116 = データが見つからない（正常）
-        console.warn('⚠️ コメント削除警告（継続）:', commentsError);
-      } else {
-        console.log('✅ タスクコメント削除完了');
+      if (commentsError && commentsError.code !== 'PGRST116') {
+        console.warn('⚠️ コメント削除警告:', commentsError);
       }
       
-      // 2. 履歴を削除
+      // 2. 履歴削除  
       const { error: historyError } = await supabase
         .from('task_history')
         .delete()
         .eq('task_id', taskId);
       
       if (historyError && historyError.code !== 'PGRST116') {
-        console.warn('⚠️ 履歴削除警告（継続）:', historyError);
-      } else {
-        console.log('✅ タスク履歴削除完了');
+        console.warn('⚠️ 履歴削除警告:', historyError);
       }
       
-      // 3. 通知を削除（task_idがdataに含まれる通知）
+      // 3. 通知削除
       const { error: notificationsError } = await supabase
         .from('notifications')
         .delete()
-        .ilike('data', `%${taskId}%`);
+        .filter('data', 'cs', `{"task_id":"${taskId}"}`);
       
       if (notificationsError && notificationsError.code !== 'PGRST116') {
-        console.warn('⚠️ 通知削除警告（継続）:', notificationsError);
-      } else {
-        console.log('✅ 関連通知削除完了');
+        console.warn('⚠️ 通知削除警告:', notificationsError);
       }
       
-    } catch (cleanupError) {
-      console.warn('⚠️ 関連データ削除で警告が発生しましたが、メインタスク削除を継続します:', cleanupError);
+      console.log('✅ 関連データの手動削除完了');
+      
+    } catch (error) {
+      console.warn('⚠️ 関連データ削除で警告（継続）:', error);
     }
-    
-    // 4. メインタスクを削除
-    console.log('🎯 メインタスク削除実行:', { taskId });
-    const { data, error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId)
-      .select();
-
-    console.log('🗑️ SharedTaskService.deleteTask 結果:', { data, error, taskId });
-
-    if (error) {
-      console.error('❌ SharedTaskService.deleteTask エラー:', error);
-      throw error;
-    }
-    
-    console.log('✅ SharedTaskService.deleteTask 成功:', { deletedData: data, taskId });
   }
 
   // タスク担当者設定

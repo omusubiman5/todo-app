@@ -26,7 +26,7 @@ export default defineConfig({
   // 全テスト共通の設定
   use: {
     // ベースURL（開発サーバーのURL）
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3007',
     
     // テスト実行時にブラウザを表示するか
     headless: true,
@@ -73,7 +73,7 @@ export default defineConfig({
   // 開発サーバーの起動設定
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3007',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
