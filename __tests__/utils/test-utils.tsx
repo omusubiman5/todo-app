@@ -1,8 +1,34 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AuthProvider } from '@/components/AuthProvider';
-import { WorkspaceProvider } from '@/components/WorkspaceProvider';
+import type { User, Session } from '@supabase/supabase-js';
+
+// Test wrapper component that provides mocked contexts
+const TestProviders = ({ children }: { children: React.ReactNode }) => {
+  const { AuthProvider } = require('@/components/AuthProvider');
+  const { WorkspaceProvider } = require('@/components/WorkspaceProvider');
+  
+  return (
+    <div data-testid="test-providers">
+      <AuthProvider>
+        <WorkspaceProvider>
+          {children}
+        </WorkspaceProvider>
+      </AuthProvider>
+    </div>
+  );
+};
+
+// AuthProvider と WorkspaceProvider をモック
+jest.mock('@/components/AuthProvider', () => ({
+  useAuth: jest.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children
+}));
+
+jest.mock('@/components/WorkspaceProvider', () => ({
+  useWorkspace: jest.fn(),
+  WorkspaceProvider: ({ children }: { children: React.ReactNode }) => children
+}));
 
 // Mock data generators
 export const createMockUser = (overrides = {}) => ({
@@ -45,93 +71,71 @@ export const createMockTeam = (overrides = {}) => ({
 export const createMockWorkspace = (overrides = {}) => ({
   type: 'personal' as const,
   team_id: null,
-  team_name: null,
+  team_name: '個人タスク',
   ...overrides
 });
 
-// Context providers wrapper
-interface AllTheProvidersProps {
-  children: React.ReactNode;
-  mockUser?: any;
-  mockWorkspace?: any;
-  requireAuth?: boolean;
+// Custom render function with default mock setup
+interface MockUser {
+  id: string;
+  email: string;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
 }
 
-const AllTheProviders = ({ 
-  children, 
-  mockUser = null, 
-  mockWorkspace = null,
-  requireAuth = false 
-}: AllTheProvidersProps) => {
-  // Mock AuthProvider
-  const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const mockAuthValue = {
-      user: mockUser,
-      session: mockUser ? { user: mockUser } : null,
-      loading: false,
-      sessionExpiry: null,
-      isSessionValid: !!mockUser,
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshSession: jest.fn(() => Promise.resolve(true)),
-      checkSessionHealth: jest.fn(() => !!mockUser)
-    };
+interface MockWorkspace {
+  type: 'personal' | 'team';
+  team_id: string | null;
+  team_name?: string;
+}
 
-    return React.createElement(
-      'div',
-      { 'data-testid': 'auth-provider' },
-      children
-    );
-  };
-
-  // Mock WorkspaceProvider
-  const MockWorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
-    const mockWorkspaceValue = {
-      workspace: mockWorkspace || createMockWorkspace(),
-      currentWorkspace: mockWorkspace || createMockWorkspace(),
-      userTeams: [],
-      loading: false,
-      switchWorkspace: jest.fn(),
-      refreshTeams: jest.fn()
-    };
-
-    return React.createElement(
-      'div',
-      { 'data-testid': 'workspace-provider' },
-      children
-    );
-  };
-
-  return (
-    <MockAuthProvider>
-      <MockWorkspaceProvider>
-        {children}
-      </MockWorkspaceProvider>
-    </MockAuthProvider>
-  );
-};
-
-// Custom render function
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  mockUser?: any;
-  mockWorkspace?: any;
-  requireAuth?: boolean;
+  mockUser?: MockUser | null;
+  mockWorkspace?: MockWorkspace | null;
 }
 
 const customRender = (
   ui: ReactElement,
   options: CustomRenderOptions = {}
 ) => {
-  const { mockUser, mockWorkspace, requireAuth, ...renderOptions } = options;
+  const { 
+    mockUser = createMockUser(), 
+    mockWorkspace = createMockWorkspace(), 
+    ...renderOptions 
+  } = options;
+
+  // Get the mocked hooks and set up return values
+  const { useAuth } = require('@/components/AuthProvider');
+  const { useWorkspace } = require('@/components/WorkspaceProvider');
+
+  // Setup mocks before rendering
+  useAuth.mockReturnValue({
+    user: mockUser,
+    session: mockUser ? { user: mockUser } as Session : null,
+    loading: false,
+    sessionExpiry: null,
+    isSessionValid: !!mockUser,
+    login: jest.fn(),
+    logout: jest.fn().mockResolvedValue(undefined),
+    refreshSession: jest.fn().mockResolvedValue(true),
+    checkSessionHealth: jest.fn().mockReturnValue(!!mockUser)
+  });
+
+  useWorkspace.mockReturnValue({
+    currentWorkspace: mockWorkspace,
+    availableWorkspaces: {
+      personal: { type: 'personal', team_id: null, team_name: '個人タスク' },
+      teams: []
+    },
+    switchWorkspace: jest.fn(),
+    refreshWorkspaces: jest.fn().mockResolvedValue(undefined),
+    isLoading: false
+  });
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <AllTheProviders
-      mockUser={mockUser}
-      mockWorkspace={mockWorkspace}
-      requireAuth={requireAuth}
-    >
-      {children}
-    </AllTheProviders>
+    <TestProviders>{children}</TestProviders>
   );
 
   return {
@@ -139,6 +143,9 @@ const customRender = (
     ...render(ui, { wrapper: Wrapper, ...renderOptions })
   };
 };
+
+// Export userEvent for tests
+export { userEvent };
 
 // Async utilities
 export const waitForLoadingToFinish = () =>
@@ -148,10 +155,10 @@ export const waitForNextTick = () =>
   new Promise(resolve => process.nextTick(resolve));
 
 // Mock API responses
-export const mockSuccessResponse = (data: any) => 
+export const mockSuccessResponse = <T,>(data: T) =>
   Promise.resolve({ data, error: null });
 
-export const mockErrorResponse = (error: any) =>
+export const mockErrorResponse = (error: { message: string; code?: string }) =>
   Promise.resolve({ data: null, error });
 
 // Test IDs constants
@@ -168,20 +175,6 @@ export const TEST_IDS = {
   ERROR_MESSAGE: 'error-message'
 } as const;
 
-// Custom matchers
-export const customMatchers = {
-  toBeInTheDocument: (received: any) => {
-    const pass = received && document.body.contains(received);
-    return {
-      message: () =>
-        pass
-          ? `Expected element not to be in the document`
-          : `Expected element to be in the document`,
-      pass
-    };
-  }
-};
-
 // API mocks
 export const createMockSupabaseClient = () => ({
   auth: {
@@ -193,7 +186,8 @@ export const createMockSupabaseClient = () => ({
       data: { subscription: { unsubscribe: jest.fn() } }
     })),
     refreshSession: jest.fn(),
-    resetPasswordForEmail: jest.fn()
+    resetPasswordForEmail: jest.fn(),
+    getUser: jest.fn()
   },
   from: jest.fn(() => ({
     select: jest.fn().mockReturnThis(),
@@ -211,29 +205,9 @@ export const createMockSupabaseClient = () => ({
     is: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     contains: jest.fn().mockReturnThis(),
-    containedBy: jest.fn().mockReturnThis(),
-    rangeGt: jest.fn().mockReturnThis(),
-    rangeGte: jest.fn().mockReturnThis(),
-    rangeLt: jest.fn().mockReturnThis(),
-    rangeLte: jest.fn().mockReturnThis(),
-    rangeAdjacent: jest.fn().mockReturnThis(),
-    overlaps: jest.fn().mockReturnThis(),
-    textSearch: jest.fn().mockReturnThis(),
-    match: jest.fn().mockReturnThis(),
-    not: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
-    filter: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
-    range: jest.fn().mockReturnThis(),
-    abortSignal: jest.fn().mockReturnThis(),
-    single: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockReturnThis(),
-    csv: jest.fn().mockReturnThis(),
-    geojson: jest.fn().mockReturnThis(),
-    explain: jest.fn().mockReturnThis(),
-    rollback: jest.fn().mockReturnThis(),
-    returns: jest.fn().mockReturnThis()
+    single: jest.fn().mockReturnThis()
   })),
   channel: jest.fn(() => ({
     on: jest.fn().mockReturnThis(),
@@ -244,15 +218,36 @@ export const createMockSupabaseClient = () => ({
 
 // Re-export everything
 export * from '@testing-library/react';
-// userEvent is included in @testing-library/react
-export const userEvent = {
-  setup: () => ({
-    click: jest.fn(),
-    type: jest.fn(),
-    clear: jest.fn(),
-    selectOptions: jest.fn(),
-    tab: jest.fn(),
-    keyboard: jest.fn()
-  })
-};
 export { customRender as render };
+export { customRender };
+
+// Jest requires at least one test
+describe('Test Utils', () => {
+  it('モックデータジェネレーターが動作する', () => {
+    const mockUser = createMockUser();
+    const mockTask = createMockTask();
+    const mockTeam = createMockTeam();
+    const mockWorkspace = createMockWorkspace();
+
+    expect(mockUser).toHaveProperty('id');
+    expect(mockUser).toHaveProperty('email');
+    expect(mockTask).toHaveProperty('text');
+    expect(mockTask).toHaveProperty('priority');
+    expect(mockTeam).toHaveProperty('name');
+    expect(mockWorkspace).toHaveProperty('type');
+  });
+
+  it('テストユーティリティが定義されている', () => {
+    expect(TEST_IDS).toBeDefined();
+    expect(mockSuccessResponse).toBeDefined();
+    expect(mockErrorResponse).toBeDefined();
+    expect(waitForLoadingToFinish).toBeDefined();
+  });
+
+  it('Supabaseクライアントモックが動作する', () => {
+    const mockClient = createMockSupabaseClient();
+    expect(mockClient.auth).toBeDefined();
+    expect(mockClient.from).toBeDefined();
+    expect(mockClient.channel).toBeDefined();
+  });
+});
