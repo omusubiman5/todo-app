@@ -16,14 +16,20 @@
     "e2e:ui": "playwright test --ui",
     "e2e:debug": "playwright test --debug",
     "e2e:headed": "playwright test --headed",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "db:optimize": "node scripts/apply-database-optimizations.js",
+    "db:benchmark": "node scripts/benchmark-database.js",
+    "db:verify": "node scripts/verify-database-indexes.js"
   },
   "dependencies": {
     "@hcaptcha/react-hcaptcha": "^1.12.1",
+    "@sentry/nextjs": "^10.12.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.52.0",
+    "@tanstack/react-query": "^5.87.4",
+    "@tanstack/react-query-devtools": "^5.87.4",
     "lucide-react": "^0.542.0",
     "next": "^15.5.2",
     "react": "19.1.0",

@@ -1,23 +1,42 @@
-// 🔬 【最小限版】SharedTaskBoard テスト - 問題特定用
+import React from 'react';
+import { screen } from '@testing-library/react';
+import { render } from '../utils/test-utils';
 
-import React from 'react'
+// Mock SharedTaskService
+jest.mock('@/lib/sharedTaskService', () => ({
+  SharedTaskService: {
+    getTasks: jest.fn().mockResolvedValue([]),
+    createTask: jest.fn().mockResolvedValue({ id: '1', text: 'Test Task', priority: '中' }),
+    updateTask: jest.fn().mockResolvedValue({}),
+    deleteTask: jest.fn().mockResolvedValue({}),
+    subscribeToTasks: jest.fn().mockReturnValue({ unsubscribe: jest.fn() })
+  }
+}));
 
-// 段階的にインポートして問題を特定
-// import SharedTaskBoard from '@/components/SharedTaskBoard'
+// Mock RealtimeConnectionManager
+jest.mock('@/lib/RealtimeConnectionManager', () => ({
+  RealtimeConnectionManager: {
+    getInstance: jest.fn(() => ({
+      subscribeToTasks: jest.fn().mockReturnValue('subscription-id'),
+      unsubscribe: jest.fn(),
+      unsubscribeFromTasks: jest.fn()
+    }))
+  }
+}));
 
-describe('SharedTaskBoard Minimal Debug Test', () => {
-  test('基本的なテスト実行確認', () => {
-    expect(1 + 1).toBe(2)
-  })
-  
-  test('Reactのインポートテスト', () => {
-    expect(React).toBeDefined()
-  })
-  
-  test('SharedTaskBoardインポート確認', () => {
-    // インポートを動的に行い、エラーを特定
+describe('SharedTaskBoard Basic Tests', () => {
+  it('基本的なレンダリングテスト', () => {
+    expect(React).toBeDefined();
+  });
+
+  it('SharedTaskBoardインポート確認', () => {
     expect(() => {
-      require('@/components/SharedTaskBoard')
-    }).not.toThrow()
-  })
-})
+      require('@/components/SharedTaskBoard');
+    }).not.toThrow();
+  });
+
+  it('基本的なコンポーネント確認', () => {
+    const SharedTaskBoard = require('@/components/SharedTaskBoard').default;
+    expect(SharedTaskBoard).toBeDefined();
+  });
+});

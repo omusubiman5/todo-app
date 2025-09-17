@@ -27,6 +27,17 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/',
 }))
 
+// AuthProvider と WorkspaceProvider のモック
+jest.mock('./components/AuthProvider', () => ({
+  useAuth: jest.fn(),
+  AuthProvider: ({ children }) => children
+}))
+
+jest.mock('./components/WorkspaceProvider', () => ({
+  useWorkspace: jest.fn(),
+  WorkspaceProvider: ({ children }) => children
+}))
+
 // Supabase クライアント モック
 jest.mock('./lib/supabase', () => ({
   supabase: {
@@ -45,6 +56,11 @@ jest.mock('./lib/supabase', () => ({
       delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       single: jest.fn(),
+    })),
+    channel: jest.fn(() => ({
+      on: jest.fn().mockReturnThis(),
+      subscribe: jest.fn(),
+      unsubscribe: jest.fn(),
     })),
   },
 }))

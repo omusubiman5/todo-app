@@ -12,7 +12,7 @@ const createMockChannel = () => ({
 });
 
 // クエリビルダーのモック
-const createMockQueryBuilder = (mockData: any = null, mockError: any = null) => ({
+const createMockQueryBuilder = (mockData: unknown = null, mockError: Error | null = null) => ({
   select: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
@@ -205,3 +205,24 @@ export const mockSupabaseResponses = {
 };
 
 export default setupSupabaseMock;
+
+// Jest requires at least one test
+describe('Supabase Mock Setup', () => {
+  it('モックが正しく設定されている', () => {
+    const mockClient = createMockSupabaseClient();
+    expect(mockClient).toBeDefined();
+    expect(mockClient.from).toBeDefined();
+    expect(mockClient.auth).toBeDefined();
+  });
+
+  it('モックレスポンスヘルパーが動作する', () => {
+    const success = mockSupabaseResponses.success({ id: 1 });
+    const error = mockSupabaseResponses.error('Test error');
+    const empty = mockSupabaseResponses.empty();
+
+    expect(success.data).toEqual({ id: 1 });
+    expect(success.error).toBeNull();
+    expect(error.error.message).toBe('Test error');
+    expect(empty.data).toEqual([]);
+  });
+});

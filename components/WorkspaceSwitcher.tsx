@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+// 🚀 React Iconsのインポート修正
 import { FaUser, FaUsers, FaChevronDown, FaCheck } from 'react-icons/fa';
 import { useWorkspace } from './WorkspaceProvider';
 import { WorkspaceContext } from '@/lib/types';

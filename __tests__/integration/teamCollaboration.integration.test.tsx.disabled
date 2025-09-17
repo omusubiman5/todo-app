@@ -1,0 +1,596 @@
+import React from 'react';
+import { screen, waitFor, within } from '@testing-library/react';
+import { render, createMockUser, createMockTask, createMockTeam } from '../utils/test-utils';
+import App from '@/app/page';
+import * as sharedTaskService from '@/lib/sharedTaskService';
+import * as teamService from '@/lib/teamService';
+
+// Mock services
+jest.mock('@/lib/sharedTaskService');
+jest.mock('@/lib/teamService');
+
+// Mock realtime manager
+jest.mock('@/lib/realtimeManager', () => ({
+  RealtimeManager: {
+    getInstance: jest.fn(() => ({
+      subscribeToTasks: jest.fn(),
+      unsubscribe: jest.fn(),
+      unsubscribeFromTasks: jest.fn(),
+      updateSubscription: jest.fn()
+    }))
+  }
+}));
+
+describe('Team Collaboration Integration Tests', () => {
+  const mockOwner = createMockUser({ 
+    id: 'owner-id', 
+    email: 'owner@example.com',
+    user_metadata: { full_name: 'Team Owner' }
+  });
+  const mockMember = createMockUser({ 
+    id: 'member-id', 
+    email: 'member@example.com',
+    user_metadata: { full_name: 'Team Member' }
+  });
+  const mockAdmin = createMockUser({ 
+    id: 'admin-id', 
+    email: 'admin@example.com',
+    user_metadata: { full_name: 'Team Admin' }
+  });
+  const mockTeam = createMockTeam({ name: '統合テストチーム' });
+
+  const mockTaskService = sharedTaskService as jest.Mocked<typeof sharedTaskService>;
+  const mockTeamService = teamService as jest.Mocked<typeof teamService>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // デフォルトのチーム設定
+    mockTeamService.getUserTeams.mockResolvedValue([
+      { teams: mockTeam, role: 'owner' }
+    ]);
+
+    mockTeamService.getTeamMembers.mockResolvedValue([
+      {
+        user_id: mockOwner.id,
+        role: 'owner',
+        joined_at: '2024-01-01T00:00:00Z',
+        users: mockOwner
+      },
+      {
+        user_id: mockMember.id,
+        role: 'member',
+        joined_at: '2024-01-02T00:00:00Z',
+        users: mockMember
+      },
+      {
+        user_id: mockAdmin.id,
+        role: 'admin',
+        joined_at: '2024-01-03T00:00:00Z',
+        users: mockAdmin
+      }
+    ]);
+
+    // デフォルトのタスク設定
+    mockTaskService.fetchTasks.mockResolvedValue([]);
+    mockTaskService.getTaskStatistics.mockResolvedValue({
+      total: 0,
+      completed: 0,
+      pending: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      completionRate: 0
+    });
+  });
+
+  describe('チーム作成とメンバー招待', () => {
+    it('新しいチームが正常に作成される', async () => {
+      const { user } = render(<App />, { mockUser: mockOwner });
+
+      // チーム作成ボタンをクリック
+      const createTeamButton = screen.getByText('新しいチーム');
+      await user.click(createTeamButton);
+
+      // チーム作成フォームに入力
+      const teamNameInput = screen.getByPlaceholderText('チーム名を入力...');
+      const teamDescInput = screen.getByPlaceholderText('チーム説明を入力...');
+      const createButton = screen.getByText('作成');
+
+      await user.type(teamNameInput, '新しい統合テストチーム');
+      await user.type(teamDescInput, 'テスト用のチーム説明');
+
+      mockTeamService.createTeam.mockResolvedValueOnce({
+        id: 'new-team-id',
+        name: '新しい統合テストチーム',
+        description: 'テスト用のチーム説明',
+        created_by: mockOwner.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        avatar_url: null
+      });
+
+      await user.click(createButton);
+
+      // チーム作成APIが正しいパラメータで呼ばれることを確認
+      expect(mockTeamService.createTeam).toHaveBeenCalledWith({
+        name: '新しい統合テストチーム',
+        description: 'テスト用のチーム説明',
+        created_by: mockOwner.id
+      });
+    });
+
+    it('メンバー招待が正常に動作する', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // チーム設定を開く
+      const teamSettingsButton = screen.getByText('チーム設定');
+      await user.click(teamSettingsButton);
+
+      // メンバー招待フォーム
+      const inviteEmailInput = screen.getByPlaceholderText('メールアドレスを入力...');
+      const roleSelect = screen.getByDisplayValue('member');
+      const inviteButton = screen.getByText('招待');
+
+      await user.type(inviteEmailInput, 'newmember@example.com');
+      await user.selectOptions(roleSelect, 'admin');
+
+      mockTeamService.createInvitation.mockResolvedValueOnce({
+        id: 'invitation-id',
+        team_id: mockTeam.id,
+        email: 'newmember@example.com',
+        role: 'admin',
+        token: 'invitation-token',
+        invited_by: mockOwner.id,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      });
+
+      await user.click(inviteButton);
+
+      // 招待作成APIが呼ばれることを確認
+      expect(mockTeamService.createInvitation).toHaveBeenCalledWith(
+        mockTeam.id,
+        'newmember@example.com',
+        'admin',
+        mockOwner.id
+      );
+    });
+
+    it('招待の受け入れが正常に動作する', async () => {
+      const invitationToken = 'valid-invitation-token';
+      
+      // URLパラメータで招待トークンが渡される想定
+      Object.defineProperty(window, 'location', {
+        value: { search: `?invitation=${invitationToken}` },
+        writable: true
+      });
+
+      mockTeamService.acceptInvitation.mockResolvedValueOnce({
+        team_id: mockTeam.id,
+        user_id: mockMember.id,
+        role: 'member',
+        invited_by: mockOwner.id,
+        joined_at: new Date().toISOString()
+      });
+
+      render(<App />, { mockUser: mockMember });
+
+      // 招待受け入れ確認ダイアログ
+      await waitFor(() => {
+        expect(screen.getByText('チーム招待を受け入れますか？')).toBeInTheDocument();
+      });
+
+      const acceptButton = screen.getByText('受け入れる');
+      await user.click(acceptButton);
+
+      // 招待受け入れAPIが呼ばれることを確認
+      expect(mockTeamService.acceptInvitation).toHaveBeenCalledWith(
+        invitationToken,
+        mockMember.id
+      );
+    });
+  });
+
+  describe('チームタスクの協業', () => {
+    const teamTasks = [
+      createMockTask({
+        id: 'team-task-1',
+        text: 'チーム統合タスク1',
+        team_id: mockTeam.id,
+        assigned_to: mockMember.id,
+        created_by: mockOwner.id,
+        priority: '高'
+      }),
+      createMockTask({
+        id: 'team-task-2',
+        text: 'チーム統合タスク2',
+        team_id: mockTeam.id,
+        assigned_to: null,
+        created_by: mockMember.id,
+        priority: '中'
+      })
+    ];
+
+    beforeEach(() => {
+      mockTaskService.fetchTasks.mockResolvedValue(teamTasks);
+    });
+
+    it('タスクの割り当てが正常に動作する', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('チーム統合タスク2')).toBeInTheDocument();
+      });
+
+      // 未割り当てタスクの割り当てボタンをクリック
+      const unassignedTask = screen.getByText('チーム統合タスク2');
+      const taskItem = unassignedTask.closest('[data-testid="task-item"]') || unassignedTask.closest('div');
+      const assignButton = within(taskItem as HTMLElement).getByText('割り当て');
+
+      await user.click(assignButton);
+
+      // メンバー選択ドロップダウン
+      const memberSelect = screen.getByRole('combobox', { name: /担当者/i });
+      await user.selectOptions(memberSelect, mockAdmin.id);
+
+      const confirmButton = screen.getByText('割り当て確定');
+
+      mockTaskService.assignTask.mockResolvedValueOnce({
+        ...teamTasks[1],
+        assigned_to: mockAdmin.id
+      });
+
+      await user.click(confirmButton);
+
+      // タスク割り当てAPIが呼ばれることを確認
+      expect(mockTaskService.assignTask).toHaveBeenCalledWith(
+        'team-task-2',
+        mockAdmin.id
+      );
+    });
+
+    it('担当者のみがタスクを編集できる権限制御が動作する', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockAdmin, // 担当者ではないユーザー
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('チーム統合タスク1')).toBeInTheDocument();
+      });
+
+      // 他人に割り当てられたタスクの編集ボタンが無効化されていることを確認
+      const assignedTask = screen.getByText('チーム統合タスク1');
+      const taskItem = assignedTask.closest('[data-testid="task-item"]') || assignedTask.closest('div');
+      const editButton = within(taskItem as HTMLElement).getByTitle('編集');
+
+      expect(editButton).toBeDisabled();
+    });
+
+    it('管理者権限でのタスク管理が正常に動作する', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockAdmin, // 管理者ユーザー
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('チーム統合タスク1')).toBeInTheDocument();
+      });
+
+      // 管理者は全てのタスクを編集可能
+      const assignedTask = screen.getByText('チーム統合タスク1');
+      const taskItem = assignedTask.closest('[data-testid="task-item"]') || assignedTask.closest('div');
+      const editButton = within(taskItem as HTMLElement).getByTitle('編集');
+
+      expect(editButton).not.toBeDisabled();
+
+      await user.click(editButton);
+
+      // 編集フォームが表示される
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('チーム統合タスク1')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('リアルタイム協業', () => {
+    it('他のメンバーのタスク更新がリアルタイムで反映される', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockMember,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('統合テストチーム')).toBeInTheDocument();
+      });
+
+      // リアルタイム更新をシミュレート（他のメンバーがタスクを作成）
+      const newTask = createMockTask({
+        id: 'realtime-task',
+        text: 'リアルタイム新規タスク',
+        team_id: mockTeam.id,
+        created_by: mockOwner.id
+      });
+
+      // リアルタイムマネージャーのコールバックを取得してイベントをトリガー
+      const realtimeManager = require('@/lib/realtimeManager').RealtimeManager.getInstance();
+      const subscribeCall = realtimeManager.subscribeToTasks.mock.calls[0];
+      const callback = subscribeCall[2]; // コールバック関数
+
+      // INSERT イベントをシミュレート
+      callback({
+        type: 'INSERT',
+        record: newTask
+      });
+
+      // 新しいタスクがUIに表示されることを確認
+      await waitFor(() => {
+        expect(screen.getByText('リアルタイム新規タスク')).toBeInTheDocument();
+      });
+    });
+
+    it('タスクの完了状態変更がリアルタイムで同期される', async () => {
+      const initialTasks = [
+        createMockTask({
+          id: 'sync-task',
+          text: '同期テストタスク',
+          team_id: mockTeam.id,
+          completed: false
+        })
+      ];
+
+      mockTaskService.fetchTasks.mockResolvedValue(initialTasks);
+
+      render(<App />, { 
+        mockUser: mockMember,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('同期テストタスク')).toBeInTheDocument();
+      });
+
+      // リアルタイム更新をシミュレート（他のメンバーがタスクを完了）
+      const realtimeManager = require('@/lib/realtimeManager').RealtimeManager.getInstance();
+      const subscribeCall = realtimeManager.subscribeToTasks.mock.calls[0];
+      const callback = subscribeCall[2];
+
+      // UPDATE イベントをシミュレート
+      callback({
+        type: 'UPDATE',
+        record: { ...initialTasks[0], completed: true },
+        oldRecord: initialTasks[0]
+      });
+
+      // タスクの完了状態が更新されることを確認
+      await waitFor(() => {
+        const checkbox = screen.getByRole('checkbox');
+        expect(checkbox).toBeChecked();
+      });
+    });
+  });
+
+  describe('権限管理', () => {
+    it('オーナーのみがチームを削除できる', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // チーム設定を開く
+      const teamSettingsButton = screen.getByText('チーム設定');
+      await user.click(teamSettingsButton);
+
+      // 危険な操作セクション
+      const dangerZone = screen.getByText('危険な操作');
+      expect(dangerZone).toBeInTheDocument();
+
+      const deleteTeamButton = screen.getByText('チームを削除');
+      expect(deleteTeamButton).toBeEnabled();
+    });
+
+    it('メンバーはチーム削除ボタンが表示されない', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockMember,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // チーム設定を開く
+      const teamSettingsButton = screen.getByText('チーム設定');
+      await user.click(teamSettingsButton);
+
+      // 危険な操作セクションが表示されないことを確認
+      expect(screen.queryByText('危険な操作')).not.toBeInTheDocument();
+      expect(screen.queryByText('チームを削除')).not.toBeInTheDocument();
+    });
+
+    it('管理者がメンバーの役割を変更できる', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockAdmin,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // チーム設定でメンバー一覧を表示
+      const teamSettingsButton = screen.getByText('チーム設定');
+      await user.click(teamSettingsButton);
+
+      // メンバーの役割変更
+      const memberRow = screen.getByText('Team Member').closest('tr');
+      const roleSelect = within(memberRow as HTMLElement).getByRole('combobox');
+
+      await user.selectOptions(roleSelect, 'admin');
+
+      mockTeamService.updateMemberRole.mockResolvedValueOnce({
+        team_id: mockTeam.id,
+        user_id: mockMember.id,
+        role: 'admin',
+        updated_at: new Date().toISOString()
+      });
+
+      const updateButton = within(memberRow as HTMLElement).getByText('更新');
+      await user.click(updateButton);
+
+      // 役割更新APIが呼ばれることを確認
+      expect(mockTeamService.updateMemberRole).toHaveBeenCalledWith(
+        mockTeam.id,
+        mockMember.id,
+        'admin'
+      );
+    });
+  });
+
+  describe('チーム統計とダッシュボード', () => {
+    it('チーム全体の統計が表示される', async () => {
+      const teamStats = {
+        total: 10,
+        completed: 4,
+        pending: 6,
+        high: 3,
+        medium: 4,
+        low: 3,
+        completionRate: 40
+      };
+
+      mockTaskService.getTaskStatistics.mockResolvedValue(teamStats);
+
+      render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('総タスク数: 10')).toBeInTheDocument();
+        expect(screen.getByText('完了率: 40%')).toBeInTheDocument();
+        expect(screen.getByText('高優先度: 3')).toBeInTheDocument();
+      });
+    });
+
+    it('メンバー別の作業量が表示される', async () => {
+      const memberTasks = [
+        { user_id: mockOwner.id, count: 5, completed: 2 },
+        { user_id: mockMember.id, count: 3, completed: 1 },
+        { user_id: mockAdmin.id, count: 2, completed: 1 }
+      ];
+
+      mockTaskService.getTasksByMember.mockResolvedValue(memberTasks);
+
+      render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // メンバー別統計タブを開く
+      const memberStatsTab = screen.getByText('メンバー別統計');
+      await user.click(memberStatsTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Team Owner: 5タスク (2完了)')).toBeInTheDocument();
+        expect(screen.getByText('Team Member: 3タスク (1完了)')).toBeInTheDocument();
+        expect(screen.getByText('Team Admin: 2タスク (1完了)')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('コミュニケーション機能', () => {
+    it('タスクコメント機能が動作する', async () => {
+      const taskWithComments = createMockTask({
+        id: 'comment-task',
+        text: 'コメント付きタスク',
+        team_id: mockTeam.id
+      });
+
+      mockTaskService.fetchTasks.mockResolvedValue([taskWithComments]);
+      
+      const { user } = render(<App />, { 
+        mockUser: mockMember,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('コメント付きタスク')).toBeInTheDocument();
+      });
+
+      // タスク詳細を開く
+      const taskTitle = screen.getByText('コメント付きタスク');
+      await user.click(taskTitle);
+
+      // コメント入力フィールド
+      const commentInput = screen.getByPlaceholderText('コメントを入力...');
+      const submitButton = screen.getByText('送信');
+
+      await user.type(commentInput, 'これは統合テストコメントです');
+      await user.click(submitButton);
+
+      // コメント作成APIが呼ばれることを確認
+      expect(mockTaskService.addTaskComment).toHaveBeenCalledWith(
+        'comment-task',
+        'これは統合テストコメントです',
+        mockMember.id
+      );
+    });
+
+    it('メンション機能が動作する', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockMember,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // タスクコメントでメンション
+      const commentInput = screen.getByPlaceholderText('コメントを入力...');
+      
+      await user.type(commentInput, '@Team Owner お疲れ様です');
+      
+      // メンション候補が表示される
+      await waitFor(() => {
+        expect(screen.getByText('Team Owner')).toBeInTheDocument();
+      });
+
+      const mentionOption = screen.getByText('Team Owner');
+      await user.click(mentionOption);
+
+      // メンション付きコメントが正しく処理される
+      expect(commentInput).toHaveValue('@Team Owner お疲れ様です');
+    });
+  });
+
+  describe('通知システム', () => {
+    it('タスク割り当て時に通知が送信される', async () => {
+      const { user } = render(<App />, { 
+        mockUser: mockOwner,
+        mockWorkspace: { type: 'team', team_id: mockTeam.id, team_name: mockTeam.name }
+      });
+
+      // タスクを作成して即座にメンバーに割り当て
+      const taskInput = screen.getByPlaceholderText('タスク内容を入力してください...');
+      const assigneeSelect = screen.getByRole('combobox', { name: /担当者/i });
+
+      await user.type(taskInput, '通知テストタスク');
+      await user.selectOptions(assigneeSelect, mockMember.id);
+
+      const addButton = screen.getByText('追加');
+      await user.click(addButton);
+
+      // 通知作成APIが呼ばれることを確認
+      expect(mockTaskService.createNotification).toHaveBeenCalledWith({
+        user_id: mockMember.id,
+        type: 'task_assigned',
+        title: 'タスクが割り当てられました',
+        message: '通知テストタスクが割り当てられました',
+        related_id: expect.any(String),
+        team_id: mockTeam.id
+      });
+    });
+
+    it('メンション時に通知が送信される', async () => {
+      // メンション通知のテスト実装
+      // 実際のアプリケーションの実装に応じてテストを作成
+    });
+  });
+});

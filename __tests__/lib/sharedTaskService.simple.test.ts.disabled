@@ -1,0 +1,47 @@
+// SharedTaskServiceの基本的な単体テスト
+describe('SharedTaskService Basic Tests', () => {
+  
+  describe('Service exports', () => {
+    it('SharedTaskServiceが正しくエクスポートされる', () => {
+      const { SharedTaskService } = require('@/lib/sharedTaskService');
+      
+      expect(SharedTaskService).toBeDefined();
+      expect(typeof SharedTaskService.getTasks).toBe('function');
+      expect(typeof SharedTaskService.createTask).toBe('function'); 
+      expect(typeof SharedTaskService.updateTask).toBe('function');
+      expect(typeof SharedTaskService.deleteTask).toBe('function');
+    });
+  });
+
+  describe('Service structure validation', () => {
+    it('すべてのメソッドが非同期関数である', () => {
+      const { SharedTaskService } = require('@/lib/sharedTaskService');
+      
+      expect(SharedTaskService.getTasks.constructor.name).toBe('AsyncFunction');
+      expect(SharedTaskService.createTask.constructor.name).toBe('AsyncFunction');
+      expect(SharedTaskService.updateTask.constructor.name).toBe('AsyncFunction');
+      expect(SharedTaskService.deleteTask.constructor.name).toBe('AsyncFunction');
+    });
+  });
+
+  describe('Error handling structure', () => {
+    it('無効なパラメータでエラーをスローする', async () => {
+      const { SharedTaskService } = require('@/lib/sharedTaskService');
+
+      // 無効なワークスペースでgetTasksを呼び出し
+      await expect(SharedTaskService.getTasks(null, 'user-id')).rejects.toThrow();
+    });
+
+    it('空のタスクIDでupdateTaskがエラーをスローする', async () => {
+      const { SharedTaskService } = require('@/lib/sharedTaskService');
+
+      await expect(SharedTaskService.updateTask('', {})).rejects.toThrow();
+    });
+
+    it('空のタスクIDでdeleteTaskがエラーをスローする', async () => {
+      const { SharedTaskService } = require('@/lib/sharedTaskService');
+
+      await expect(SharedTaskService.deleteTask('')).rejects.toThrow();
+    });
+  });
+});

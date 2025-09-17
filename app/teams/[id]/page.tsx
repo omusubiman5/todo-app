@@ -340,10 +340,16 @@ export default function TeamDetailPage() {
               {team.avatar_url ? (
                 <Image
                   src={team.avatar_url}
-                  alt={team.name}
+                  alt={`${team.name}のチームアバター`}
                   width={64}
                   height={64}
                   className="w-16 h-16 rounded-full object-cover border-2 border-white/30"
+                  // 🚀 Next.js Image最適化設定
+                  priority={true} // チームページのメイン画像なので優先読み込み
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                  sizes="64px"
+                  quality={85} // 画質とファイルサイズのバランス
                 />
               ) : (
                 <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center text-white text-2xl font-semibold border-2 border-white/20">
@@ -449,10 +455,17 @@ export default function TeamDetailPage() {
                 {member.user?.user_metadata?.avatar_url ? (
                   <Image
                     src={member.user.user_metadata.avatar_url}
-                    alt={member.user?.user_metadata?.full_name || member.user?.email || 'メンバー'}
+                    alt={`${member.user?.user_metadata?.full_name || member.user?.email || 'メンバー'}のアバター`}
                     width={40}
                     height={40}
                     className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
+                    // 🚀 Next.js Image最適化設定（メンバーリスト）
+                    priority={false} // メンバーアバターは遅延読み込み
+                    placeholder="blur"
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                    sizes="40px"
+                    quality={80} // メンバーアバターは少し低い品質で軽量化
+                    loading="lazy" // 明示的な遅延読み込み
                   />
                 ) : (
                   <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center text-white font-medium border-2 border-white/20">

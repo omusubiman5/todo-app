@@ -19,6 +19,14 @@ const customJestConfig = {
     '**/*.(test|spec).(js|jsx|ts|tsx)'
   ],
   
+  // Playwright テストを除外
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/', 
+    '<rootDir>/node_modules/',
+    '<rootDir>/e2e/',
+    '<rootDir>/tests/'
+  ],
+  
   // カバレッジ設定
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
@@ -51,8 +59,6 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   
-  // Next.js の .next ディレクトリを除外
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   
   // テスト実行前の設定
   verbose: true,

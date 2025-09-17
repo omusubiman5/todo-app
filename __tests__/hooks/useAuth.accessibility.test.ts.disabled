@@ -1,0 +1,408 @@
+import { renderHook, waitFor } from '@testing-library/react';
+import { useAuth } from '@/components/AuthProvider';
+import { createMockSupabaseClient, createMockUser } from '../utils/test-utils';
+
+// AuthProviderをモック
+jest.mock('@/components/AuthProvider', () => ({
+  useAuth: jest.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children
+}));
+
+describe('useAuth Accessibility Features', () => {
+  const mockSupabaseClient = createMockSupabaseClient();
+  const mockUser = createMockUser();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Login accessibility', () => {
+    it('ログイン処理中にアクセシブルなローディング状態を提供する', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: true,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn()
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      // ローディング状態がスクリーンリーダーで認識できる
+      expect(result.current.loading).toBe(true);
+      expect(result.current.user).toBeNull();
+    });
+
+    it('ログイン成功時に適切なユーザー情報を提供する', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn()
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.isSessionValid).toBe(true);
+    });
+
+    it('ログイン失敗時にアクセシブルなエラー状態を提供する', async () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      const mockLogin = jest.fn().mockRejectedValue(new Error('認証に失敗しました'));
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: mockLogin,
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        error: '認証に失敗しました'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.error).toBe('認証に失敗しました');
+      expect(result.current.user).toBeNull();
+      expect(result.current.isSessionValid).toBe(false);
+    });
+  });
+
+  describe('Session management accessibility', () => {
+    it('セッション期限切れ時に適切な警告を提供する', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      const expiryTime = Date.now() + 5 * 60 * 1000; // 5分後
+      
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: expiryTime,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        sessionWarning: 'セッションが間もなく期限切れになります'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.sessionWarning).toBe('セッションが間もなく期限切れになります');
+      expect(result.current.sessionExpiry).toBe(expiryTime);
+    });
+
+    it('セッション無効時にアクセシブルな状態を提供する', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        sessionStatus: 'expired'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.isSessionValid).toBe(false);
+      expect(result.current.sessionStatus).toBe('expired');
+      expect(result.current.user).toBeNull();
+    });
+
+    it('セッション更新中にアクセシブルなローディング状態を提供する', async () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      const mockRefreshSession = jest.fn().mockResolvedValue({
+        user: mockUser,
+        session: { user: mockUser }
+      });
+      
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: mockRefreshSession,
+        checkSessionHealth: jest.fn(),
+        refreshing: true,
+        refreshStatus: 'セッションを更新中...'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.refreshing).toBe(true);
+      expect(result.current.refreshStatus).toBe('セッションを更新中...');
+    });
+  });
+
+  describe('Logout accessibility', () => {
+    it('ログアウト処理中にアクセシブルなローディング状態を提供する', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        loggingOut: true,
+        logoutStatus: 'ログアウト中...'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.loggingOut).toBe(true);
+      expect(result.current.logoutStatus).toBe('ログアウト中...');
+    });
+
+    it('ログアウト完了時に適切な状態リセットを行う', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        logoutComplete: true
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.session).toBeNull();
+      expect(result.current.isSessionValid).toBe(false);
+      expect(result.current.logoutComplete).toBe(true);
+    });
+  });
+
+  describe('Error handling accessibility', () => {
+    it('認証エラーが適切にアナウンスされる', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        error: {
+          message: 'メールアドレスまたはパスワードが正しくありません',
+          code: 'invalid_credentials',
+          severity: 'error',
+          announceToScreenReader: true
+        }
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.error.message).toBe('メールアドレスまたはパスワードが正しくありません');
+      expect(result.current.error.announceToScreenReader).toBe(true);
+      expect(result.current.error.severity).toBe('error');
+    });
+
+    it('ネットワークエラーが適切に処理される', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        error: {
+          message: 'ネットワーク接続を確認してください',
+          code: 'network_error',
+          severity: 'warning',
+          retryable: true,
+          announceToScreenReader: true
+        }
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.error.message).toBe('ネットワーク接続を確認してください');
+      expect(result.current.error.retryable).toBe(true);
+      expect(result.current.error.severity).toBe('warning');
+    });
+  });
+
+  describe('User information accessibility', () => {
+    it('ユーザー情報がスクリーンリーダーに適切に提供される', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      const userWithMetadata = {
+        ...mockUser,
+        user_metadata: {
+          full_name: '田中 太郎',
+          avatar_url: 'https://example.com/avatar.jpg',
+          display_name: '田中さん'
+        }
+      };
+      
+      mockUseAuth.mockReturnValue({
+        user: userWithMetadata,
+        session: { user: userWithMetadata },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        userDisplayName: '田中さん',
+        userEmail: mockUser.email
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.userDisplayName).toBe('田中さん');
+      expect(result.current.userEmail).toBe(mockUser.email);
+      expect(result.current.user?.user_metadata?.full_name).toBe('田中 太郎');
+    });
+
+    it('匿名ユーザー状態が適切に識別される', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        isAnonymous: true,
+        anonymousMessage: '現在ログインしていません'
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.isAnonymous).toBe(true);
+      expect(result.current.anonymousMessage).toBe('現在ログインしていません');
+    });
+  });
+
+  describe('State transition announcements', () => {
+    it('ログイン状態の変更が適切にアナウンスされる', () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      
+      // 初回: 未ログイン状態
+      mockUseAuth.mockReturnValue({
+        user: null,
+        session: null,
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: false,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        stateTransition: null
+      });
+
+      const { result, rerender } = renderHook(() => useAuth());
+
+      expect(result.current.user).toBeNull();
+
+      // 再レンダリング: ログイン完了状態
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: jest.fn(),
+        stateTransition: {
+          from: 'logged_out',
+          to: 'logged_in',
+          announcement: 'ログインが完了しました'
+        }
+      });
+
+      rerender();
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.stateTransition?.announcement).toBe('ログインが完了しました');
+    });
+  });
+
+  describe('Helper function accessibility', () => {
+    it('セッション健全性チェックが適切な情報を提供する', async () => {
+      const { useAuth: mockUseAuth } = require('@/components/AuthProvider');
+      const mockCheckSessionHealth = jest.fn().mockResolvedValue({
+        isHealthy: true,
+        message: 'セッションは正常です',
+        nextCheck: Date.now() + 60000 // 1分後
+      });
+      
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        session: { user: mockUser },
+        loading: false,
+        sessionExpiry: null,
+        isSessionValid: true,
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshSession: jest.fn(),
+        checkSessionHealth: mockCheckSessionHealth,
+        lastHealthCheck: {
+          timestamp: Date.now(),
+          result: 'healthy',
+          message: 'セッションは正常です'
+        }
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      expect(result.current.lastHealthCheck?.result).toBe('healthy');
+      expect(result.current.lastHealthCheck?.message).toBe('セッションは正常です');
+    });
+  });
+});

@@ -11,7 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import Navigation from "@/components/Navigation";
 
-// 動的インポートでコード分割
+// 🚀 改善された動的インポートで最適なコード分割
 const SharedTaskBoard = dynamic(() => import("@/components/SharedTaskBoard"), {
   loading: () => <div className="flex items-center justify-center py-8">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
@@ -20,7 +20,22 @@ const SharedTaskBoard = dynamic(() => import("@/components/SharedTaskBoard"), {
   ssr: false
 });
 
-const NotificationCenter = dynamic(() => import("@/components/NotificationCenter"), {
+// 統計ダッシュボードの遅延読み込み（必要時のみ） - 現在は未使用
+// const TaskStats = dynamic(() => import("@/components/LazyComponents").then(mod => ({ default: mod.LazyTaskStatsDashboard })), {
+//   loading: () => (
+//     <div className="animate-pulse space-y-4">
+//       <div className="h-8 bg-white/20 rounded w-1/3"></div>
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//         <div className="h-32 bg-white/20 rounded"></div>
+//         <div className="h-32 bg-white/20 rounded"></div>
+//         <div className="h-32 bg-white/20 rounded"></div>
+//       </div>
+//     </div>
+//   ),
+//   ssr: false
+// });
+
+const NotificationCenter = dynamic(() => import("@/components/LazyComponents").then(mod => ({ default: mod.LazyNotificationCenter })), {
   loading: () => <div className="animate-pulse w-12 h-12 bg-white/20 rounded-full"></div>,
   ssr: false
 });

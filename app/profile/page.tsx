@@ -9,7 +9,13 @@ import {
   FaSignOutAlt, FaEnvelope
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
-import StatsDashboard from "@/components/StatsDashboard";
+import dynamic from 'next/dynamic';
+
+// 重いコンポーネントを動的読み込み
+const StatsDashboard = dynamic(() => import("@/components/StatsDashboard"), {
+  loading: () => <div className="animate-pulse bg-gray-200 h-64 rounded"></div>,
+  ssr: false
+});
 
 type Profile = {
   id: string;
@@ -511,11 +517,16 @@ export default function ProfilePage() {
                   {profile?.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
-                      alt="プロフィール画像"
+                      alt={`${profile.display_name || user.email}のプロフィール画像`}
                       width={128}
                       height={128}
                       className="w-full h-full rounded-full object-cover border-4 border-white/30"
-                      priority
+                      // 🚀 Next.js Image最適化設定（プロフィール）
+                      priority={true} // プロフィールページのメイン画像
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                      sizes="128px"
+                      quality={90} // プロフィール画像は高品質
                     />
                   ) : (
                     <div className="w-full h-full bg-white/20 rounded-full flex items-center justify-center text-white text-4xl">

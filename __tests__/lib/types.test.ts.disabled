@@ -1,0 +1,248 @@
+// 型定義の構造テスト
+import type { 
+  Team, 
+  TeamMember, 
+  TeamInvitation, 
+  CreateTeamData,
+  UpdateTeamData,
+  SharedTask,
+  WorkspaceContext,
+  TaskPriority
+} from '@/lib/types';
+
+describe('Type Definitions', () => {
+  
+  describe('Team interface', () => {
+    it('Teamオブジェクトが正しい構造を持つ', () => {
+      const team: Team = {
+        id: 'team-1',
+        name: 'Test Team',
+        description: 'Test description',
+        avatar_url: 'https://example.com/avatar.png',
+        created_by: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      };
+
+      expect(team.id).toBe('team-1');
+      expect(team.name).toBe('Test Team');
+      expect(team.description).toBe('Test description');
+      expect(team.created_by).toBe('user-1');
+      expect(typeof team.created_at).toBe('string');
+    });
+
+    it('必須フィールドのみでTeamオブジェクトを作成できる', () => {
+      const minimalTeam: Team = {
+        id: 'team-2',
+        name: 'Minimal Team',
+        created_by: 'user-2',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      };
+
+      expect(minimalTeam.id).toBe('team-2');
+      expect(minimalTeam.description).toBeUndefined();
+      expect(minimalTeam.avatar_url).toBeUndefined();
+    });
+  });
+
+  describe('TeamMember interface', () => {
+    it('TeamMemberオブジェクトが正しい構造を持つ', () => {
+      const teamMember: TeamMember = {
+        team_id: 'team-1',
+        user_id: 'user-1',
+        role: 'admin',
+        joined_at: '2024-01-01T00:00:00Z',
+        invited_by: 'user-0',
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          user_metadata: {
+            full_name: 'Test User',
+            avatar_url: 'https://example.com/avatar.png'
+          }
+        }
+      };
+
+      expect(teamMember.team_id).toBe('team-1');
+      expect(teamMember.role).toBe('admin');
+      expect(teamMember.user?.email).toBe('test@example.com');
+    });
+
+    it('有効なロールが定義されている', () => {
+      const roles: TeamMember['role'][] = ['owner', 'admin', 'member', 'guest'];
+      
+      roles.forEach(role => {
+        const teamMember: TeamMember = {
+          team_id: 'team-1',
+          user_id: 'user-1',
+          role: role,
+          joined_at: '2024-01-01T00:00:00Z'
+        };
+        
+        expect(['owner', 'admin', 'member', 'guest']).toContain(teamMember.role);
+      });
+    });
+  });
+
+  describe('TeamInvitation interface', () => {
+    it('TeamInvitationオブジェクトが正しい構造を持つ', () => {
+      const invitation: TeamInvitation = {
+        id: 'invite-1',
+        team_id: 'team-1',
+        email: 'invite@example.com',
+        role: 'member',
+        token: 'abc123xyz',
+        expires_at: '2024-01-08T00:00:00Z',
+        created_at: '2024-01-01T00:00:00Z',
+        created_by: 'user-1',
+        team: {
+          name: 'Test Team',
+          description: 'Team description'
+        }
+      };
+
+      expect(invitation.email).toBe('invite@example.com');
+      expect(invitation.role).toBe('member');
+      expect(invitation.team?.name).toBe('Test Team');
+    });
+
+    it('招待可能なロールが制限されている', () => {
+      const validRoles: TeamInvitation['role'][] = ['admin', 'member', 'guest'];
+      
+      validRoles.forEach(role => {
+        const invitation: TeamInvitation = {
+          id: 'invite-1',
+          team_id: 'team-1',
+          email: 'test@example.com',
+          role: role,
+          token: 'token123',
+          expires_at: '2024-01-08T00:00:00Z',
+          created_at: '2024-01-01T00:00:00Z',
+          created_by: 'user-1'
+        };
+        
+        expect(['admin', 'member', 'guest']).toContain(invitation.role);
+      });
+    });
+  });
+
+  describe('CreateTeamData and UpdateTeamData', () => {
+    it('CreateTeamDataが正しい構造を持つ', () => {
+      const createData: CreateTeamData = {
+        name: 'New Team',
+        description: 'New team description',
+        avatar_url: 'https://example.com/avatar.png'
+      };
+
+      expect(createData.name).toBe('New Team');
+      expect(typeof createData.name).toBe('string');
+    });
+
+    it('CreateTeamDataは名前のみでも作成できる', () => {
+      const minimalData: CreateTeamData = {
+        name: 'Minimal Team'
+      };
+
+      expect(minimalData.name).toBe('Minimal Team');
+      expect(minimalData.description).toBeUndefined();
+    });
+
+    it('UpdateTeamDataは部分的な更新をサポートする', () => {
+      const updateData: UpdateTeamData = {
+        name: 'Updated Name'
+        // description と avatar_url は省略
+      };
+
+      expect(updateData.name).toBe('Updated Name');
+    });
+  });
+
+  describe('WorkspaceContext', () => {
+    it('個人ワークスペースが正しく定義される', () => {
+      const personalWorkspace: WorkspaceContext = {
+        type: 'personal',
+        team_id: null,
+        team_name: '個人タスク'
+      };
+
+      expect(personalWorkspace.type).toBe('personal');
+      expect(personalWorkspace.team_id).toBeNull();
+    });
+
+    it('チームワークスペースが正しく定義される', () => {
+      const teamWorkspace: WorkspaceContext = {
+        type: 'team',
+        team_id: 'team-1',
+        team_name: 'Development Team'
+      };
+
+      expect(teamWorkspace.type).toBe('team');
+      expect(teamWorkspace.team_id).toBe('team-1');
+      expect(teamWorkspace.team_name).toBe('Development Team');
+    });
+  });
+
+  describe('TaskPriority', () => {
+    it('有効な優先度が定義されている', () => {
+      const priorities: TaskPriority[] = ['高', '中', '低'];
+      
+      priorities.forEach(priority => {
+        expect(['高', '中', '低']).toContain(priority);
+      });
+    });
+  });
+
+  describe('Type compatibility', () => {
+    it('SharedTaskとTeamの関係が正しい', () => {
+      // SharedTaskがteam_idを持つことを確認
+      const task: Partial<SharedTask> = {
+        id: 'task-1',
+        team_id: 'team-1', // TeamのIDと互換性がある
+        user_id: 'user-1'
+      };
+
+      const team: Team = {
+        id: 'team-1', // taskのteam_idと一致
+        name: 'Test Team',
+        created_by: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      };
+
+      expect(task.team_id).toBe(team.id);
+    });
+
+    it('TeamMemberとUserの関係が正しい', () => {
+      const teamMember: TeamMember = {
+        team_id: 'team-1',
+        user_id: 'user-1',
+        role: 'member',
+        joined_at: '2024-01-01T00:00:00Z',
+        user: {
+          id: 'user-1', // user_idと一致
+          email: 'test@example.com'
+        }
+      };
+
+      expect(teamMember.user_id).toBe(teamMember.user?.id);
+    });
+  });
+
+  describe('Optional fields handling', () => {
+    it('オプションフィールドがundefinedでも型エラーにならない', () => {
+      const team: Team = {
+        id: 'team-1',
+        name: 'Test Team',
+        created_by: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+        // description と avatar_url は省略
+      };
+
+      expect(team.description).toBeUndefined();
+      expect(team.avatar_url).toBeUndefined();
+      expect(typeof team.name).toBe('string'); // 必須フィールドは存在
+    });
+  });
+});

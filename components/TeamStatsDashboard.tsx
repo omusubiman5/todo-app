@@ -18,6 +18,7 @@ import { FaChartPie, FaChartBar, FaChartLine, FaTasks, FaCheck, FaUsers, FaCrown
 import { useAuth } from './AuthProvider';
 import { useWorkspace } from './WorkspaceProvider';
 import { SharedTaskService } from '@/lib/sharedTaskService';
+import { useOptimizedChartData } from '@/hooks/useOptimizedChartData';
 
 type TeamStatsDashboardProps = {
   darkMode?: boolean;
@@ -75,6 +76,7 @@ const CustomTooltip = ({ active, payload, label, darkMode }: TooltipProps) => {
   return null;
 };
 
+// 🚀 Phase 3: TeamStatsDashboard memo化最適化
 export default function TeamStatsDashboard({ darkMode = false }: TeamStatsDashboardProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
@@ -82,6 +84,18 @@ export default function TeamStatsDashboard({ darkMode = false }: TeamStatsDashbo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeChart, setActiveChart] = useState<'pie' | 'bar' | 'line' | 'members'>('pie');
+
+  // 🚀 Phase 3: 最適化されたチャートデータ
+  const {
+    pieChartData,
+    barChartData,
+    lineChartData,
+    memberStatsData,
+    summaryStats,
+    chartColors,
+    isDataReady,
+    isEmpty
+  } = useOptimizedChartData(stats, darkMode);
 
   // チーム統計データを取得（メモ化でちらつき防止）
   const fetchTeamStats = useMemo(() => {

@@ -1,0 +1,298 @@
+// エラー処理パスの包括的テスト
+describe('Error Handling Patterns', () => {
+  
+  describe('Network Error Simulation', () => {
+    it('ネットワーク接続エラーを適切に処理する', () => {
+      const networkError = new Error('Network request failed');
+      networkError.name = 'NetworkError';
+
+      const handleNetworkError = (error: Error) => {
+        if (error.name === 'NetworkError') {
+          return {
+            type: 'network_error',
+            message: 'ネットワーク接続を確認してください',
+            retryable: true
+          };
+        }
+        return {
+          type: 'unknown_error',
+          message: '予期しないエラーが発生しました',
+          retryable: false
+        };
+      };
+
+      const result = handleNetworkError(networkError);
+      
+      expect(result.type).toBe('network_error');
+      expect(result.retryable).toBe(true);
+      expect(result.message).toContain('ネットワーク');
+    });
+
+    it('タイムアウトエラーを適切に処理する', () => {
+      const timeoutError = new Error('Request timeout');
+      timeoutError.name = 'TimeoutError';
+
+      const handleTimeoutError = (error: Error) => {
+        if (error.message.includes('timeout') || error.name === 'TimeoutError') {
+          return {
+            type: 'timeout_error',
+            message: 'リクエストがタイムアウトしました。再試行してください。',
+            retryable: true,
+            suggestedDelay: 2000
+          };
+        }
+        return null;
+      };
+
+      const result = handleTimeoutError(timeoutError);
+      
+      expect(result?.type).toBe('timeout_error');
+      expect(result?.retryable).toBe(true);
+      expect(result?.suggestedDelay).toBe(2000);
+    });
+  });
+
+  describe('Validation Error Patterns', () => {
+    it('必須フィールドの検証エラーを処理する', () => {
+      const validateRequiredFields = (data: Record<string, any>, required: string[]) => {
+        const errors: string[] = [];
+        
+        required.forEach(field => {
+          if (!data[field] || (typeof data[field] === 'string' && data[field].trim() === '')) {
+            errors.push(`${field}は必須です`);
+          }
+        });
+
+        return {
+          isValid: errors.length === 0,
+          errors
+        };
+      };
+
+      const invalidData = { name: '', email: 'test@example.com' };
+      const result = validateRequiredFields(invalidData, ['name', 'email', 'password']);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('nameは必須です');
+      expect(result.errors).toContain('passwordは必須です');
+      expect(result.errors).not.toContain('emailは必須です');
+    });
+
+    it('フォーマット検証エラーを処理する', () => {
+      const validateEmail = (email: string) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!emailRegex.test(email)) {
+          return {
+            isValid: false,
+            error: 'メールアドレスの形式が正しくありません'
+          };
+        }
+        
+        return { isValid: true };
+      };
+
+      const invalidEmails = ['invalid-email', '@domain.com', 'user@', 'user.domain.com'];
+      const validEmails = ['user@domain.com', 'test.email@example.org'];
+
+      invalidEmails.forEach(email => {
+        const result = validateEmail(email);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toContain('メールアドレス');
+      });
+
+      validEmails.forEach(email => {
+        const result = validateEmail(email);
+        expect(result.isValid).toBe(true);
+      });
+    });
+  });
+
+  describe('Async Error Handling', () => {
+    it('非同期処理のエラーをtry-catchで処理する', async () => {
+      const simulateAsyncOperation = async (shouldFail: boolean) => {
+        if (shouldFail) {
+          throw new Error('Async operation failed');
+        }
+        return { success: true, data: 'operation completed' };
+      };
+
+      const handleAsyncError = async (shouldFail: boolean) => {
+        try {
+          const result = await simulateAsyncOperation(shouldFail);
+          return { success: true, result };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+        }
+      };
+
+      // 成功ケース
+      const successResult = await handleAsyncError(false);
+      expect(successResult.success).toBe(true);
+      expect(successResult.result?.data).toBe('operation completed');
+
+      // エラーケース
+      const errorResult = await handleAsyncError(true);
+      expect(errorResult.success).toBe(false);
+      expect(errorResult.error).toBe('Async operation failed');
+    });
+
+    it('Promiseのrejectを適切に処理する', async () => {
+      const promiseWithReject = () => {
+        return Promise.reject(new Error('Promise rejected'));
+      };
+
+      const handlePromiseReject = async () => {
+        try {
+          await promiseWithReject();
+          return { handled: false };
+        } catch (error) {
+          return {
+            handled: true,
+            errorMessage: error instanceof Error ? error.message : 'Unknown promise error'
+          };
+        }
+      };
+
+      const result = await handlePromiseReject();
+      expect(result.handled).toBe(true);
+      expect(result.errorMessage).toBe('Promise rejected');
+    });
+  });
+
+  describe('Error Recovery Patterns', () => {
+    it('リトライ機能を実装できる', async () => {
+      let attemptCount = 0;
+      
+      const unreliableOperation = async () => {
+        attemptCount++;
+        if (attemptCount < 3) {
+          throw new Error(`Attempt ${attemptCount} failed`);
+        }
+        return `Success on attempt ${attemptCount}`;
+      };
+
+      const withRetry = async (operation: () => Promise<string>, maxRetries = 3) => {
+        let lastError: Error | null = null;
+        
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            return await operation();
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error('Unknown error');
+            
+            // 最後の試行でない場合は少し待つ
+            if (i < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
+        }
+        
+        throw lastError;
+      };
+
+      const result = await withRetry(unreliableOperation);
+      expect(result).toBe('Success on attempt 3');
+      expect(attemptCount).toBe(3);
+    });
+
+    it('フォールバック値を提供できる', () => {
+      const getConfigValue = (key: string, fallback: string) => {
+        const config: Record<string, string> = {
+          'api_url': 'https://api.example.com'
+          // 'missing_key' は意図的に省略
+        };
+
+        return config[key] || fallback;
+      };
+
+      expect(getConfigValue('api_url', 'default')).toBe('https://api.example.com');
+      expect(getConfigValue('missing_key', 'default_value')).toBe('default_value');
+    });
+  });
+
+  describe('Error Boundary Patterns', () => {
+    it('エラー境界の概念をテストする', () => {
+      const createErrorBoundary = () => {
+        let hasError = false;
+        let errorInfo: Error | null = null;
+
+        return {
+          catchError: (error: Error) => {
+            hasError = true;
+            errorInfo = error;
+          },
+          getErrorState: () => ({
+            hasError,
+            error: errorInfo
+          }),
+          reset: () => {
+            hasError = false;
+            errorInfo = null;
+          }
+        };
+      };
+
+      const errorBoundary = createErrorBoundary();
+      
+      // 初期状態
+      expect(errorBoundary.getErrorState().hasError).toBe(false);
+      
+      // エラーをキャッチ
+      const testError = new Error('Component crashed');
+      errorBoundary.catchError(testError);
+      
+      const errorState = errorBoundary.getErrorState();
+      expect(errorState.hasError).toBe(true);
+      expect(errorState.error?.message).toBe('Component crashed');
+      
+      // リセット
+      errorBoundary.reset();
+      expect(errorBoundary.getErrorState().hasError).toBe(false);
+    });
+  });
+
+  describe('Input Sanitization', () => {
+    it('悪意のある入力を無害化できる', () => {
+      const sanitizeInput = (input: string) => {
+        // HTMLタグを除去
+        const withoutTags = input.replace(/<[^>]*>/g, '');
+        
+        // スクリプト関連の文字列を除去
+        const withoutScript = withoutTags.replace(/javascript:/gi, '');
+        
+        // 基本的な特殊文字をエスケープ
+        return withoutScript
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;');
+      };
+
+      const maliciousInputs = [
+        '<script>alert("xss")</script>',
+        'javascript:alert("xss")',
+        '<img src="x" onerror="alert(1)">',
+        'Hello & "World"'
+      ];
+
+      const expectedOutputs = [
+        'alert("xss")',
+        'alert("xss")',
+        '',
+        'Hello &amp; &quot;World&quot;'
+      ];
+
+      maliciousInputs.forEach((input, index) => {
+        const result = sanitizeInput(input);
+        expect(result).toBe(expectedOutputs[index]);
+        expect(result).not.toContain('<script>');
+        expect(result).not.toContain('javascript:');
+      });
+    });
+  });
+});

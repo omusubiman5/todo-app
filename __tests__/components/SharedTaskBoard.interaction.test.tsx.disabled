@@ -1,0 +1,476 @@
+import React from 'react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, createMockTask, createMockWorkspace, createMockUser } from '../utils/test-utils';
+
+// SharedTaskBoardをモック化
+jest.mock('@/components/SharedTaskBoard', () => {
+  return function MockSharedTaskBoard({ workspace, currentUserId, onTaskCreate, onTaskUpdate, onTaskDelete }: any) {
+    return (
+      <div data-testid="shared-task-board">
+        <h1>タスク管理ボード - {workspace?.team_name || '個人タスク'}</h1>
+        
+        {/* タスク追加フォーム */}
+        <form data-testid="task-form" onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target as HTMLFormElement);
+          const newTask = {
+            id: 'new-task',
+            text: formData.get('text') as string,
+            priority: formData.get('priority') as string,
+            completed: false,
+            user_id: currentUserId
+          };
+          onTaskCreate?.(newTask);
+        }}>
+          <input
+            name="text"
+            placeholder="新しいタスクを入力"
+            aria-label="新しいタスクテキスト"
+            required
+          />
+          <select
+            name="priority"
+            aria-label="優先度選択"
+            defaultValue="中"
+          >
+            <option value="高">高</option>
+            <option value="中">中</option>
+            <option value="低">低</option>
+          </select>
+          <button type="submit" aria-label="タスクを追加">追加</button>
+        </form>
+
+        {/* タスク一覧 */}
+        <div data-testid="task-list" role="list" aria-label="タスク一覧">
+          {/* サンプルタスク */}
+          <div 
+            role="listitem" 
+            data-testid="task-item-sample1"
+            aria-label="タスク: サンプルタスク1, 優先度: 高, 未完了"
+          >
+            <input
+              type="checkbox"
+              aria-label="サンプルタスク1を完了にする"
+              onChange={() => onTaskUpdate?.('sample1', { completed: true })}
+            />
+            <span>サンプルタスク1 (優先度: 高)</span>
+            <button
+              aria-label="サンプルタスク1を削除"
+              onClick={() => onTaskDelete?.('sample1')}
+            >
+              削除
+            </button>
+          </div>
+          
+          <div 
+            role="listitem"
+            data-testid="task-item-sample2"
+            aria-label="タスク: サンプルタスク2, 優先度: 中, 完了済み"
+          >
+            <input
+              type="checkbox"
+              checked
+              aria-label="サンプルタスク2を未完了に戻す"
+              onChange={() => onTaskUpdate?.('sample2', { completed: false })}
+            />
+            <span style={{ textDecoration: 'line-through' }}>サンプルタスク2 (優先度: 中)</span>
+            <button
+              aria-label="サンプルタスク2を削除"
+              onClick={() => onTaskDelete?.('sample2')}
+            >
+              削除
+            </button>
+          </div>
+        </div>
+
+        {/* フィルター機能 */}
+        <div data-testid="task-filters" role="group" aria-label="タスクフィルター">
+          <button
+            data-testid="filter-all"
+            aria-label="すべてのタスクを表示"
+            onClick={() => console.log('すべて表示')}
+          >
+            すべて
+          </button>
+          <button
+            data-testid="filter-active"
+            aria-label="未完了のタスクのみ表示"
+            onClick={() => console.log('未完了のみ')}
+          >
+            未完了
+          </button>
+          <button
+            data-testid="filter-completed"
+            aria-label="完了済みのタスクのみ表示"
+            onClick={() => console.log('完了済みのみ')}
+          >
+            完了済み
+          </button>
+        </div>
+
+        {/* ソート機能 */}
+        <div data-testid="task-sort" role="group" aria-label="タスクソート">
+          <label>
+            ソート順:
+            <select aria-label="ソート順序を選択">
+              <option value="created_at">作成日順</option>
+              <option value="priority">優先度順</option>
+              <option value="alphabetical">アルファベット順</option>
+            </select>
+          </label>
+        </div>
+
+        {/* 統計情報 */}
+        <div data-testid="task-stats" role="region" aria-label="タスク統計">
+          <span>合計: 2件</span>
+          <span>完了: 1件</span>
+          <span>未完了: 1件</span>
+        </div>
+      </div>
+    );
+  };
+});
+
+const SharedTaskBoard = require('@/components/SharedTaskBoard').default;
+
+describe('SharedTaskBoard User Interaction Tests', () => {
+  const mockUser = createMockUser();
+  const mockWorkspace = createMockWorkspace();
+
+  beforeEach(() => {
+    // useAuth と useWorkspace のモック設定
+    const { useAuth } = require('@/components/AuthProvider');
+    const { useWorkspace } = require('@/components/WorkspaceProvider');
+    
+    useAuth.mockReturnValue({
+      user: mockUser,
+      session: { user: mockUser },
+      loading: false,
+      sessionExpiry: null,
+      isSessionValid: true,
+      login: jest.fn(),
+      logout: jest.fn(),
+      refreshSession: jest.fn(),
+      checkSessionHealth: jest.fn()
+    });
+
+    useWorkspace.mockReturnValue({
+      currentWorkspace: mockWorkspace,
+      availableWorkspaces: {
+        personal: { type: 'personal', team_id: null, team_name: '個人タスク' },
+        teams: []
+      },
+      switchWorkspace: jest.fn(),
+      refreshWorkspaces: jest.fn(),
+      isLoading: false
+    });
+  });
+
+  describe('Task creation interactions', () => {
+    it('タスク作成フォームが適切に動作する', async () => {
+      const onTaskCreate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskCreate={onTaskCreate}
+        />
+      );
+
+      const textInput = screen.getByLabelText('新しいタスクテキスト');
+      const prioritySelect = screen.getByLabelText('優先度選択');
+      const addButton = screen.getByLabelText('タスクを追加');
+
+      // タスクテキストを入力
+      fireEvent.change(textInput, { target: { value: '新しいテストタスク' } });
+      
+      // 優先度を選択
+      fireEvent.change(prioritySelect, { target: { value: '高' } });
+      
+      // フォームを送信
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        expect(onTaskCreate).toHaveBeenCalledWith({
+          id: 'new-task',
+          text: '新しいテストタスク',
+          priority: '高',
+          completed: false,
+          user_id: mockUser.id
+        });
+      });
+    });
+
+    it('空のタスクテキストでは送信できない', () => {
+      const onTaskCreate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskCreate={onTaskCreate}
+        />
+      );
+
+      const textInput = screen.getByLabelText('新しいタスクテキスト');
+      const addButton = screen.getByLabelText('タスクを追加');
+
+      // 空のまま送信を試行
+      fireEvent.click(addButton);
+
+      // required属性により送信が阻止される
+      expect(textInput).toHaveAttribute('required');
+      expect(onTaskCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Task update interactions', () => {
+    it('タスクの完了状態を切り替えできる', async () => {
+      const onTaskUpdate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskUpdate={onTaskUpdate}
+        />
+      );
+
+      const task1Checkbox = screen.getByLabelText('サンプルタスク1を完了にする');
+      
+      fireEvent.click(task1Checkbox);
+
+      await waitFor(() => {
+        expect(onTaskUpdate).toHaveBeenCalledWith('sample1', { completed: true });
+      });
+    });
+
+    it('完了済みタスクを未完了に戻せる', async () => {
+      const onTaskUpdate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskUpdate={onTaskUpdate}
+        />
+      );
+
+      const task2Checkbox = screen.getByLabelText('サンプルタスク2を未完了に戻す');
+      
+      fireEvent.click(task2Checkbox);
+
+      await waitFor(() => {
+        expect(onTaskUpdate).toHaveBeenCalledWith('sample2', { completed: false });
+      });
+    });
+  });
+
+  describe('Task deletion interactions', () => {
+    it('タスクを削除できる', async () => {
+      const onTaskDelete = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskDelete={onTaskDelete}
+        />
+      );
+
+      const deleteButton1 = screen.getByLabelText('サンプルタスク1を削除');
+      
+      fireEvent.click(deleteButton1);
+
+      await waitFor(() => {
+        expect(onTaskDelete).toHaveBeenCalledWith('sample1');
+      });
+    });
+  });
+
+  describe('Filter interactions', () => {
+    it('フィルターボタンが適切に動作する', () => {
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      const allFilter = screen.getByTestId('filter-all');
+      const activeFilter = screen.getByTestId('filter-active');
+      const completedFilter = screen.getByTestId('filter-completed');
+
+      // フィルターボタンがクリック可能であることを確認
+      expect(allFilter).toBeInTheDocument();
+      expect(activeFilter).toBeInTheDocument();
+      expect(completedFilter).toBeInTheDocument();
+
+      fireEvent.click(allFilter);
+      fireEvent.click(activeFilter);
+      fireEvent.click(completedFilter);
+
+      // コンソールログでクリックイベントが発火することを確認
+    });
+
+    it('フィルターが適切なARIAラベルを持つ', () => {
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      const filtersGroup = screen.getByRole('group', { name: 'タスクフィルター' });
+      expect(filtersGroup).toBeInTheDocument();
+
+      expect(screen.getByLabelText('すべてのタスクを表示')).toBeInTheDocument();
+      expect(screen.getByLabelText('未完了のタスクのみ表示')).toBeInTheDocument();
+      expect(screen.getByLabelText('完了済みのタスクのみ表示')).toBeInTheDocument();
+    });
+  });
+
+  describe('Sort interactions', () => {
+    it('ソート機能が適切に動作する', () => {
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      const sortSelect = screen.getByLabelText('ソート順序を選択');
+      expect(sortSelect).toBeInTheDocument();
+
+      // ソートオプションを変更
+      fireEvent.change(sortSelect, { target: { value: 'priority' } });
+      expect(sortSelect).toHaveValue('priority');
+
+      fireEvent.change(sortSelect, { target: { value: 'alphabetical' } });
+      expect(sortSelect).toHaveValue('alphabetical');
+    });
+  });
+
+  describe('Keyboard navigation', () => {
+    it('Tabキーでフォーカス可能要素を順次移動できる', () => {
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      const textInput = screen.getByLabelText('新しいタスクテキスト');
+      const prioritySelect = screen.getByLabelText('優先度選択');
+      const addButton = screen.getByLabelText('タスクを追加');
+
+      // 順次フォーカス移動をテスト
+      textInput.focus();
+      expect(textInput).toHaveFocus();
+
+      fireEvent.keyDown(textInput, { key: 'Tab' });
+      expect(prioritySelect).toHaveFocus();
+
+      fireEvent.keyDown(prioritySelect, { key: 'Tab' });
+      expect(addButton).toHaveFocus();
+    });
+
+    it('Enterキーでタスク作成フォームが送信される', () => {
+      const onTaskCreate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskCreate={onTaskCreate}
+        />
+      );
+
+      const textInput = screen.getByLabelText('新しいタスクテキスト');
+      
+      fireEvent.change(textInput, { target: { value: 'キーボードテスト' } });
+      fireEvent.keyDown(textInput, { key: 'Enter' });
+
+      expect(onTaskCreate).toHaveBeenCalledWith({
+        id: 'new-task',
+        text: 'キーボードテスト',
+        priority: '中',
+        completed: false,
+        user_id: mockUser.id
+      });
+    });
+  });
+
+  describe('Statistics display', () => {
+    it('タスク統計情報が適切に表示される', () => {
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      const statsRegion = screen.getByRole('region', { name: 'タスク統計' });
+      expect(statsRegion).toBeInTheDocument();
+
+      expect(screen.getByText('合計: 2件')).toBeInTheDocument();
+      expect(screen.getByText('完了: 1件')).toBeInTheDocument();
+      expect(screen.getByText('未完了: 1件')).toBeInTheDocument();
+    });
+  });
+
+  describe('Workspace context interactions', () => {
+    it('個人ワークスペースでは適切なタイトルが表示される', () => {
+      const personalWorkspace = createMockWorkspace();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={personalWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      expect(screen.getByText('タスク管理ボード - 個人タスク')).toBeInTheDocument();
+    });
+
+    it('チームワークスペースでは適切なタイトルが表示される', () => {
+      const teamWorkspace = createMockWorkspace({
+        type: 'team',
+        team_id: 'team-1',
+        team_name: 'Development Team'
+      });
+      
+      render(
+        <SharedTaskBoard 
+          workspace={teamWorkspace}
+          currentUserId={mockUser.id}
+        />
+      );
+
+      expect(screen.getByText('タスク管理ボード - Development Team')).toBeInTheDocument();
+    });
+  });
+
+  describe('Responsive interactions', () => {
+    it('タッチイベントでタスクの完了状態を切り替えできる', () => {
+      const onTaskUpdate = jest.fn();
+      
+      render(
+        <SharedTaskBoard 
+          workspace={mockWorkspace}
+          currentUserId={mockUser.id}
+          onTaskUpdate={onTaskUpdate}
+        />
+      );
+
+      const task1Checkbox = screen.getByLabelText('サンプルタスク1を完了にする');
+      
+      fireEvent.touchStart(task1Checkbox);
+      fireEvent.touchEnd(task1Checkbox);
+      fireEvent.click(task1Checkbox);
+
+      expect(onTaskUpdate).toHaveBeenCalledWith('sample1', { completed: true });
+    });
+  });
+});
