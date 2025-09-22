@@ -22,6 +22,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Supabaseクライアントの初期化（ダミー値でもOK）
 export const supabase: SupabaseClient = createClient(
-  supabaseUrl || 'https://dummy.supabase.co',
-  supabaseAnonKey || 'dummy-anon-key-for-build-time'
+  supabaseUrl || 'https://localhost:54321',
+  // eslint-disable-next-line no-secrets/no-secrets
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 ); 

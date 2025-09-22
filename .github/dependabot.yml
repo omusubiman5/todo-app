@@ -1,0 +1,39 @@
+# Dependabot セキュリティ更新設定
+version: 2
+updates:
+  # Node.js 依存関係の監視
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "Asia/Tokyo"
+    # セキュリティ更新を優先
+    open-pull-requests-limit: 10
+    # セキュリティ脆弱性は即座に対応
+    allow:
+      - dependency-type: "all"
+    # 自動マージ設定（セキュリティパッチのみ）
+    reviewers:
+      - "security-team"
+    assignees:
+      - "dev-team"
+    labels:
+      - "security"
+      - "dependencies"
+      - "automated"
+    # セキュリティ専用設定
+    target-branch: "security-updates"
+
+  # GitHub Actions の監視
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    labels:
+      - "github-actions"
+      - "security"

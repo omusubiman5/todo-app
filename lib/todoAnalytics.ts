@@ -174,7 +174,7 @@ export const trackTaskCompletion = (data: Partial<TaskAnalyticsData>) => {
 };
 
 // 機能使用トラッキング
-export const trackFeatureUsage = (feature: string, context?: any) => {
+export const trackFeatureUsage = (feature: string, context?: Record<string, unknown>) => {
   const featureData = {
     feature,
     context,
@@ -209,7 +209,9 @@ const getFeatureCategory = (feature: string): string => {
     'import_tasks': 'Data Import',
   };
 
-  return categories[feature] || 'Other';
+  // Validate feature to prevent object injection
+  const validFeatures = Object.keys(categories) as Array<keyof typeof categories>;
+  return validFeatures.includes(feature as any) ? categories[feature as keyof typeof categories] : 'Other';
 };
 
 // 完了時間のカテゴリ分類
@@ -221,7 +223,7 @@ const getTimeCategory = (minutes: number): string => {
 };
 
 // 日別統計の保存
-const saveDailyStats = (eventType: string, data: any) => {
+const saveDailyStats = (eventType: string, data: Record<string, unknown>) => {
   if (typeof window === 'undefined') return;
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -231,15 +233,17 @@ const saveDailyStats = (eventType: string, data: any) => {
     const existingData = localStorage.getItem(storageKey);
     const dailyStats = existingData ? JSON.parse(existingData) : {};
 
-    if (!dailyStats[eventType]) {
-      dailyStats[eventType] = [];
+    // Validate eventType to prevent object injection
+    const safeEventType = String(eventType).replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (!dailyStats[safeEventType]) {
+      dailyStats[safeEventType] = [];
     }
 
-    dailyStats[eventType].push(data);
+    dailyStats[safeEventType].push(data);
 
     // 最新100件のみ保持
-    if (dailyStats[eventType].length > 100) {
-      dailyStats[eventType] = dailyStats[eventType].slice(-100);
+    if (dailyStats[safeEventType] && dailyStats[safeEventType].length > 100) {
+      dailyStats[safeEventType] = dailyStats[safeEventType].slice(-100);
     }
 
     localStorage.setItem(storageKey, JSON.stringify(dailyStats));
@@ -276,7 +280,10 @@ export const getPeriodStats = (days: number = 7) => {
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
 
-    stats[dateStr] = getDailyStats(dateStr);
+    // Validate dateStr format before using as key
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      stats[dateStr] = getDailyStats(dateStr);
+    }
   }
 
   return stats;
@@ -288,10 +295,12 @@ export const getFeatureUsageStats = (days: number = 7) => {
   const featureStats: Record<string, number> = {};
 
   Object.values(periodStats).forEach((dayData: any) => {
-    if (dayData.feature_used) {
+    if (dayData.feature_used && Array.isArray(dayData.feature_used)) {
       dayData.feature_used.forEach((usage: any) => {
-        const feature = usage.feature;
-        featureStats[feature] = (featureStats[feature] || 0) + 1;
+        if (usage && typeof usage.feature === 'string') {
+          const safeFeature = String(usage.feature).replace(/[^a-zA-Z0-9_-]/g, '_');
+          featureStats[safeFeature] = (featureStats[safeFeature] || 0) + 1;
+        }
       });
     }
   });
@@ -307,7 +316,10 @@ export const getTaskCreationTrend = (days: number = 7) => {
   const trendData: Record<string, number> = {};
 
   Object.entries(periodStats).forEach(([date, dayData]: [string, any]) => {
-    trendData[date] = dayData.task_created ? dayData.task_created.length : 0;
+    // Validate date format before using as key
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      trendData[date] = (dayData.task_created && Array.isArray(dayData.task_created)) ? dayData.task_created.length : 0;
+    }
   });
 
   return trendData;
@@ -320,8 +332,8 @@ export const getTaskCompletionRate = (days: number = 7) => {
   let totalCompleted = 0;
 
   Object.values(periodStats).forEach((dayData: any) => {
-    if (dayData.task_created) totalCreated += dayData.task_created.length;
-    if (dayData.task_completed) totalCompleted += dayData.task_completed.length;
+    if (dayData.task_created && Array.isArray(dayData.task_created)) totalCreated += dayData.task_created.length;
+    if (dayData.task_completed && Array.isArray(dayData.task_completed)) totalCompleted += dayData.task_completed.length;
   });
 
   return totalCreated > 0 ? Math.round((totalCompleted / totalCreated) * 100) : 0;

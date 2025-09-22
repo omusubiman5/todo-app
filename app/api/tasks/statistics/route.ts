@@ -48,13 +48,11 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const url = new URL(req.url);
     const period = url.searchParams.get('period') || 'all'; // all, week, month, year

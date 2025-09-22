@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 
 // 🚀 Phase 3 Stage 3: パフォーマンスデータ収集API
 
@@ -232,7 +231,7 @@ function extractMetricData(reports: PerformanceReport[], metricName: string) {
     metricName,
     data: metricValues.map((value, index) => ({
       value,
-      timestamp: timestamps[index],
+      timestamp: (timestamps && index < timestamps.length) ? timestamps[index] : new Date(),
     })),
     statistics: {
       count: metricValues.length,
@@ -300,7 +299,9 @@ function generatePerformanceSummary(reports: PerformanceReport[]): {
   
   const customMetrics: { [key: string]: CustomMetricSummary } = {};
   customMetricsMap.forEach((values, name) => {
-    customMetrics[name] = {
+    // Validate name to prevent object injection
+    const safeName = String(name).replace(/[^a-zA-Z0-9_-]/g, '_');
+    customMetrics[safeName] = {
       count: values.length,
       average: values.reduce((a, b) => a + b, 0) / values.length,
       min: Math.min(...values),
@@ -341,13 +342,15 @@ function calculateTrend(values: number[]): 'improving' | 'stable' | 'degrading' 
 function getMedian(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 
-    ? (sorted[mid - 1] + sorted[mid]) / 2 
-    : sorted[mid];
+  if (sorted.length === 0) return 0;
+  return sorted.length % 2 === 0
+    ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+    : (sorted[mid] ?? 0);
 }
 
 function getPercentile(values: number[], percentile: number): number {
+  if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const index = Math.ceil((percentile / 100) * sorted.length) - 1;
-  return sorted[index];
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil((percentile / 100) * sorted.length) - 1));
+  return sorted[index] ?? 0;
 }

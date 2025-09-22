@@ -422,11 +422,19 @@ export const PERMISSIONS = {
 
 // 特定の操作の権限チェック
 export async function hasPermission(teamId: string, action: keyof typeof PERMISSIONS): Promise<boolean> {
+  // Validate action to prevent object injection
+  if (!action || typeof action !== 'string' || !(action in PERMISSIONS)) {
+    return false;
+  }
   const allowedRoles = PERMISSIONS[action];
   return await checkTeamPermission(teamId, allowedRoles);
 }
 
 // 階層的権限チェック（より高い権限があるかどうか）
 export function hasHigherRole(userRole: TeamMember['role'], targetRole: TeamMember['role']): boolean {
-  return ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[targetRole];
+  // Validate roles to prevent object injection
+  if (!userRole || !targetRole || !(userRole in ROLE_HIERARCHY) || !(targetRole in ROLE_HIERARCHY)) {
+    return false;
+  }
+  return (ROLE_HIERARCHY[userRole] || 0) > (ROLE_HIERARCHY[targetRole] || 0);
 } 

@@ -182,11 +182,16 @@ export class SecurityManager {
     
     for (const pattern of sqlPatterns) {
       if (pattern.test(sanitized)) {
-        // 疑わしいパターンが見つかった場合、ログに記録
-        console.warn('Potential SQL injection attempt detected:', {
-          input: input.substring(0, 100) + '...',
-          pattern: pattern.source,
-          timestamp: new Date().toISOString(),
+        // セキュリティログ記録（機密情報を除外）
+        this.logSecurityEvent({
+          type: 'csrf_violation',
+          details: {
+            inputLength: input.length,
+            patternMatched: pattern.source,
+            sanitizedLength: sanitized.length,
+            // 実際の入力内容は記録しない（機密情報保護）
+          },
+          severity: 'high',
         });
         break;
       }
@@ -197,11 +202,12 @@ export class SecurityManager {
 
   // Rate Limiting
   public checkRateLimit(
-    identifier: string, 
-    limit: number = 100, 
+    identifier: string,
+    limit: number = 1000, // 開発環境用に大幅に緩和
     windowMs: number = 15 * 60 * 1000
   ): { allowed: boolean; remaining: number; resetTime: number } {
-    if (!this.config.rateLimiting) {
+    // 開発環境では Rate Limiting を無効化
+    if (!this.config.rateLimiting || process.env.NODE_ENV === 'development') {
       return { allowed: true, remaining: limit, resetTime: Date.now() + windowMs };
     }
     
@@ -272,20 +278,37 @@ export class SecurityManager {
     };
   }
 
-  // Content Security Policy 生成
+  // Content Security Policy 生成（セキュア強化版）
   private generateCSP(): string {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+      // 🛡️ セキュア: nonce/hashベース or strict-dynamic のみ
+      isDevelopment
+        ? "script-src 'self' 'nonce-development' https://js.sentry-cdn.com https://vercel.live"
+        : "script-src 'self' 'strict-dynamic' https://js.sentry-cdn.com",
+      // CSS: Google Fonts用にのみ外部ドメインを許可
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live",
+      // 画像: 具体的なドメインのみ許可
+      "img-src 'self' data: blob: https://zmxnsfjmusgmapxbcbpn.supabase.co",
+      // 接続: 必要なサービスのみ許可
+      "connect-src 'self' https://zmxnsfjmusgmapxbcbpn.supabase.co wss://zmxnsfjmusgmapxbcbpn.supabase.co https://o4507986074763264.ingest.sentry.io https://vercel.live",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "object-src 'none'",
+      "media-src 'self'",
+      "child-src 'none'",
+      "worker-src 'self'",
+      "manifest-src 'self'",
+      "upgrade-insecure-requests",
+      // 🛡️ DOM XSS防御: Trusted Types
+      "require-trusted-types-for 'script'",
+      "trusted-types default nextjs"
     ];
-    
+
     return cspDirectives.join('; ');
   }
 

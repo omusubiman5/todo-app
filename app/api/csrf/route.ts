@@ -6,7 +6,7 @@ import { securityManager } from '@/lib/security/securityManager';
 export async function GET(request: NextRequest) {
   try {
     const userAgent = request.headers.get('user-agent') || undefined;
-    const ip = request.ip || request.headers.get('x-forwarded-for') || undefined;
+    const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || undefined;
     
     // 新しいCSRFトークンを生成
     const token = securityManager.generateCSRFToken(userAgent, ip);
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
     
     const userAgent = request.headers.get('user-agent') || undefined;
-    const ip = request.ip || request.headers.get('x-forwarded-for') || undefined;
+    const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || undefined;
     
     // トークンの検証
     const isValid = securityManager.validateCSRFToken(token, userAgent, ip);

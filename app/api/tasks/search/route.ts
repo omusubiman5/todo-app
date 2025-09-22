@@ -123,13 +123,11 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const url = new URL(req.url);
     
@@ -137,7 +135,7 @@ export async function GET(req: NextRequest) {
     const query = url.searchParams.get('q') || '';
     const priority = url.searchParams.get('priority');
     const completed = url.searchParams.get('completed');
-    const archived = url.searchParams.get('archived');
+    const _archived = url.searchParams.get('archived'); // Future feature
     const team_id = url.searchParams.get('team_id');
     const assigned_to = url.searchParams.get('assigned_to');
     const date_from = url.searchParams.get('date_from');
@@ -245,13 +243,11 @@ export async function GET(req: NextRequest) {
 // 高度検索（POST - 複雑な検索条件）
 export async function POST(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const body = await req.json();
     const {
@@ -260,7 +256,7 @@ export async function POST(req: NextRequest) {
       date_ranges = {},
       sorting = {},
       pagination = {},
-      advanced_options = {}
+      advanced_options: _advanced_options = {} // Future feature
     } = body;
 
     // 高度なテキスト検索

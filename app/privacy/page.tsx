@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function PrivacyPolicyPage() {
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -135,12 +137,12 @@ export default function PrivacyPolicyPage() {
       </div>
 
       <div className="mt-12 pt-8 border-t border-gray-300">
-        <a
+        <Link
           href="/"
           className="inline-block bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition-colors"
         >
           ← ホームに戻る
-        </a>
+        </Link>
       </div>
     </div>
   );

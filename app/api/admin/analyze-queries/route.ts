@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Unused import
 
 /**
  * Supabase公式Index Advisor分析API
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
 /**
  * Index Advisor の結果から最適なインデックス群を抽出
  */
-function compileIndexRecommendations(results: unknown[]) {
+function compileIndexRecommendations(_results: unknown[]) {
   // サンプル推奨インデックス（実際のIndex Advisor結果に基づいて生成）
   return {
     high_priority: [

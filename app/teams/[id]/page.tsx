@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FaArrowLeft, FaUsers, FaCamera } from 'react-icons/fa';
@@ -25,7 +25,7 @@ export default function TeamDetailPage() {
     description: ''
   });
 
-  const loadTeamDetails = async () => {
+  const loadTeamDetails = useCallback(async () => {
     try {
       setLoading(true);
       const teamData = await getTeamDetails(teamId);
@@ -58,11 +58,11 @@ export default function TeamDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teamId]);
 
   useEffect(() => {
     loadTeamDetails();
-  }, [teamId, loadTeamDetails]);
+  }, [loadTeamDetails]);
 
   const handleUpdateTeam = async () => {
     if (!team) return;
@@ -347,6 +347,7 @@ export default function TeamDetailPage() {
                   // 🚀 Next.js Image最適化設定
                   priority={true} // チームページのメイン画像なので優先読み込み
                   placeholder="blur"
+                  // eslint-disable-next-line no-secrets/no-secrets
                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                   sizes="64px"
                   quality={85} // 画質とファイルサイズのバランス
@@ -462,6 +463,7 @@ export default function TeamDetailPage() {
                     // 🚀 Next.js Image最適化設定（メンバーリスト）
                     priority={false} // メンバーアバターは遅延読み込み
                     placeholder="blur"
+                    // eslint-disable-next-line no-secrets/no-secrets
                     blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                     sizes="40px"
                     quality={80} // メンバーアバターは少し低い品質で軽量化

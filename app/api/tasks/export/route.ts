@@ -88,19 +88,17 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const url = new URL(req.url);
     const format = url.searchParams.get('format') || 'csv';
     const team_id = url.searchParams.get('team_id');
     const include_completed = url.searchParams.get('include_completed') === 'true';
-    const include_archived = url.searchParams.get('include_archived') === 'true';
+    const _include_archived = url.searchParams.get('include_archived') === 'true'; // Future feature
     const date_from = url.searchParams.get('date_from');
     const date_to = url.searchParams.get('date_to');
 
@@ -268,13 +266,11 @@ function exportAsJSON(tasks: Array<Record<string, unknown>>) {
 // エクスポート履歴の記録（POST）
 export async function POST(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const body = await req.json();
     const { export_type, filters, task_count } = body;

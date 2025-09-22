@@ -3,13 +3,11 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const _user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const body = await req.json();
     const { operation, task_ids, updates } = body;
@@ -30,7 +28,7 @@ export async function POST(req: NextRequest) {
           .from('tasks')
           .delete()
           .in('id', task_ids)
-          .eq('user_id', _user.id);
+          .eq('user_id', user.id);
 
         if (deleteError) throw deleteError;
         
@@ -57,7 +55,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString()
           })
           .in('id', task_ids)
-          .eq('user_id', _user.id)
+          .eq('user_id', user.id)
           .select();
 
         if (updateError) throw updateError;
@@ -80,7 +78,7 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString()
           })
           .in('id', task_ids)
-          .eq('user_id', _user.id)
+          .eq('user_id', user.id)
           .select();
 
         if (completeError) throw completeError;
@@ -100,7 +98,7 @@ export async function POST(req: NextRequest) {
           .from('tasks')
           .delete()
           .in('id', task_ids)
-          .eq('user_id', _user.id);
+          .eq('user_id', user.id);
 
         if (archiveError) throw archiveError;
         
@@ -133,13 +131,11 @@ export async function POST(req: NextRequest) {
 // 一括操作の進行状況を取得
 export async function GET(req: NextRequest) {
   try {
-    // 一時的に認証チェックを無効化してテスト（有効なUUID形式を使用）
-    const _user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // テスト用のダミーユーザー（UUID形式）
-    
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // 認証チェック（必須）
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
 
     const url = new URL(req.url);
     const operation_id = url.searchParams.get('operation_id');

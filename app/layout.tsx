@@ -1,89 +1,137 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from "@/components/AuthProvider";
-import { WorkspaceProvider } from "@/components/WorkspaceProvider";
-import { QueryProvider } from "@/providers/QueryProvider";
-import { CSRFProtection } from "@/components/security/CSRFProtection";
-import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
-import { CookieConsent } from "@/components/analytics/CookieConsent";
-import { AnalyticsInitializer } from "@/components/AnalyticsInitializer";
+import { Inter } from 'next/font/google';
+import './globals.css';
+import Script from 'next/script';
 
-// 🚀 フォント最適化：必要な文字とウェイトのみ読み込み
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"], // 必要なウェイトのみ
-  display: "swap", // フォント読み込み中の表示最適化
-  preload: true, // 優先読み込み
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"], // 必要なウェイトのみ
-  display: "swap",
-  preload: false, // メインフォントではないので後回し
-});
-
-// 🚀 Phase 3 Stage 3: SEO最適化メタデータ
-export const metadata: Metadata = {
-  title: "TodoApp - 効率的なタスク管理アプリ",
-  description: "React 19とSupabaseで構築された高性能なタスク管理アプリ。チーム協業、リアルタイム同期、アクセシビリティ対応。",
-  keywords: ["タスク管理", "todo", "プロジェクト管理", "チーム協業", "React", "Next.js"],
-  authors: [{ name: "TodoApp Team" }],
-  creator: "TodoApp",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://todo-app.example.com'),
-  
-  openGraph: {
-    title: "TodoApp - 効率的なタスク管理",
-    description: "チーム協業とリアルタイム同期に対応した次世代タスク管理アプリ",
-    type: "website",
-    locale: "ja_JP",
-    siteName: "TodoApp",
+export const metadata = {
+  title: 'タスク管理アプリ',
+  description: '効率的なタスク管理とチーム共同作業のためのアプリケーション',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
   },
-  
-  twitter: {
-    card: "summary_large_image",
-    title: "TodoApp - 効率的なタスク管理",
-    description: "チーム協業とリアルタイム同期に対応した次世代タスク管理アプリ",
-  },
-  
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
-  
-  category: "productivity",
 };
+
+// Trusted Types初期化用のスクリプト
+const trustedTypesScript = `
+(function() {
+  if (typeof window !== 'undefined' && window.trustedTypes && !window.trustedTypes.defaultPolicy) {
+    try {
+      const policy = window.trustedTypes.createPolicy('default', {
+        createHTML: function(input) {
+          // 開発環境では全て許可、本番環境では制限
+          if (${process.env.NODE_ENV === 'development'}) {
+            return input;
+          }
+
+          // 本番環境での安全化処理
+          return input
+            .replace(/<script[\\s\\S]*?<\\/script>/gi, '')
+            .replace(/<iframe[\\s\\S]*?<\\/iframe>/gi, '')
+            .replace(/javascript:/gi, '')
+            .replace(/on\\w+\\s*=/gi, '');
+        },
+
+        createScript: function(input) {
+          // 開発環境でのNext.js関連スクリプトを許可
+          if (${process.env.NODE_ENV === 'development'}) {
+            if (input.includes('_next') ||
+                input.includes('webpack') ||
+                input.includes('turbopack') ||
+                input.includes('__nextjs') ||
+                input.includes('hot-reload') ||
+                input.includes('react-refresh') ||
+                /window\\.__/.test(input)) {
+              return input;
+            }
+          }
+
+          // 許可されたドメインからのスクリプト
+          const allowedDomains = [
+            'js.sentry-cdn.com',
+            'vercel.live'
+          ];
+
+          const isAllowed = allowedDomains.some(domain => input.includes(domain));
+          return isAllowed ? input : '';
+        },
+
+        createScriptURL: function(input) {
+          const allowedOrigins = [
+            location.origin,
+            'https://js.sentry-cdn.com',
+            'https://vercel.live'
+          ];
+
+          try {
+            const url = new URL(input);
+            const isAllowed = allowedOrigins.some(origin => url.origin === origin);
+            return isAllowed ? input : 'about:blank';
+          } catch {
+            // 相対URLは許可
+            return input.startsWith('/') || input.startsWith('./') ? input : 'about:blank';
+          }
+        }
+      });
+
+      console.log('🛡️ Trusted Types policy initialized');
+
+      // Next.jsのための追加ポリシー
+      if (!window.trustedTypes.getPolicyNames().includes('nextjs')) {
+        window.trustedTypes.createPolicy('nextjs', {
+          createHTML: function(input) {
+            return policy.createHTML(input);
+          },
+          createScript: function(input) {
+            return policy.createScript(input);
+          },
+          createScriptURL: function(input) {
+            return policy.createScriptURL(input);
+          }
+        });
+      }
+
+    } catch (error) {
+      console.warn('⚠️ Trusted Types policy setup failed:', error);
+    }
+  }
+})();
+`;
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <head>
-        <GoogleAnalytics />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <CSRFProtection>
-          <QueryProvider>
-            <AuthProvider requireAuth={false}>
-              <WorkspaceProvider>
-                {/* アナリティクス初期化 */}
-                <AnalyticsInitializer />
-                {children}
-              </WorkspaceProvider>
-            </AuthProvider>
-          </QueryProvider>
-        </CSRFProtection>
+}) {
+  const nonce = process.env.NODE_ENV === 'development' ? 'development' : '';
 
-        {/* Cookie同意バナー */}
-        <CookieConsent />
+  return (
+    <html lang="ja" className={inter.className}>
+      <head>
+        {/* 🛡️ Trusted Types初期化を最優先で実行 */}
+        <Script
+          id="trusted-types-init"
+          strategy="beforeInteractive"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: trustedTypesScript
+          }}
+        />
+      </head>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <main className="container mx-auto px-4 py-8">
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -140,7 +140,7 @@ const AccessibleTaskItem = React.forwardRef<HTMLDivElement, AccessibleTaskItemPr
       role="listitem"
       tabIndex={0}
       aria-label={`${task.text}、${priorityConfig.ariaLabel}、${completionConfig.statusText}、作成日${formatDate(task.created_at)}`}
-      aria-selected={isSelected}
+      data-selected={isSelected}
       aria-describedby={`task-${task.id}-details`}
       className={`
         rounded-lg p-4 transition-all duration-200 backdrop-blur-sm border shadow-lg

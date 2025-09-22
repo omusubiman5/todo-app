@@ -11,8 +11,8 @@ import {
 } from '@/lib/todoAnalytics';
 
 interface DashboardData {
-  todayStats: any;
-  weekStats: any;
+  todayStats: Record<string, unknown>;
+  weekStats: Record<string, unknown>;
   featureUsage: Array<{ feature: string; count: number }>;
   taskTrend: Record<string, number>;
   completionRate: number;
@@ -258,7 +258,7 @@ function MetricCard({ title, value, icon, color }: {
   };
 
   return (
-    <div className={`p-4 rounded-lg border-2 ${colorClasses[color]}`}>
+    <div className={`p-4 rounded-lg border-2 ${colorClasses[color] || 'border-gray-200 bg-gray-50'}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600 mb-1">{title}</p>
@@ -271,12 +271,12 @@ function MetricCard({ title, value, icon, color }: {
 }
 
 // 最近のアクティビティコンポーネント
-function RecentActivity({ data }: { data: any }) {
+function RecentActivity({ data }: { data: Record<string, unknown> }) {
   const activities = [];
 
   // タスク作成
   if (data.task_created?.length > 0) {
-    data.task_created.slice(-3).forEach((task: any) => {
+    data.task_created?.slice?.(-3)?.forEach?.((task: Record<string, unknown>) => {
       activities.push({
         type: 'task_created',
         time: task.event_timestamp,
@@ -288,7 +288,7 @@ function RecentActivity({ data }: { data: any }) {
 
   // タスク完了
   if (data.task_completed?.length > 0) {
-    data.task_completed.slice(-3).forEach((task: any) => {
+    data.task_completed?.slice?.(-3)?.forEach?.((task: Record<string, unknown>) => {
       activities.push({
         type: 'task_completed',
         time: task.completedAt,
@@ -354,5 +354,7 @@ function getFeatureDisplayName(feature: string): string {
     'import_tasks': 'データインポート',
   };
 
-  return displayNames[feature] || feature;
+  // Validate feature to prevent object injection
+  const validFeatures = Object.keys(displayNames);
+  return validFeatures.includes(feature) ? displayNames[feature] : feature;
 }

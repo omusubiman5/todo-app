@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 // 🚀 Phase 3 Stage 2: スクリーンリーダー最適化システム
 
@@ -146,8 +146,8 @@ export function useScreenReaderAnnouncements() {
 }
 
 // スクリーンリーダー用ライブリージョンコンポーネント
-const ScreenReaderAnnouncements: React.FC<ScreenReaderAnnouncementsProps> = ({ 
-  darkMode = false 
+const ScreenReaderAnnouncements: React.FC<ScreenReaderAnnouncementsProps> = ({
+  darkMode: _darkMode = false  // Future feature
 }) => {
   const { politeRef, assertiveRef } = useScreenReaderAnnouncements();
   
