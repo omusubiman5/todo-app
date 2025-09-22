@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import SecureLoginForm from "@/components/SecureLoginForm";
 import { type AuthError } from "@/lib/authErrors";
 import { FaExclamationTriangle, FaShieldAlt } from "react-icons/fa";
+import Link from "next/link";
 
 function LoginContent() {
   const router = useRouter();
@@ -90,6 +91,16 @@ function LoginContent() {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Registration Link */}
+        <div className="mt-6 text-center">
+          <p className="text-white/80 text-sm">
+            アカウントをお持ちでない方は{" "}
+            <Link href="/register" className="text-white font-medium hover:underline">
+              新規登録
+            </Link>
+          </p>
         </div>
       </div>
     </div>
