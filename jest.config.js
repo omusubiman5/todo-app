@@ -7,8 +7,11 @@ const createJestConfig = nextJest({
 
 // Jest の設定オプション
 const customJestConfig = {
-  // テスト環境を設定
+  // テスト環境を設定（adminテストはNode.js環境）
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    customExportConditions: ['']
+  },
   
   // セットアップファイルを指定
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -17,6 +20,34 @@ const customJestConfig = {
   testMatch: [
     '**/__tests__/**/*.(js|jsx|ts|tsx)',
     '**/*.(test|spec).(js|jsx|ts|tsx)'
+  ],
+
+  // プロジェクト設定で環境を分割
+  projects: [
+    {
+      displayName: 'jsdom',
+      testEnvironment: 'jsdom',
+      testMatch: ['<rootDir>/__tests__/components/**/*.(test|spec).(js|jsx|ts|tsx)'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      }
+    },
+    {
+      displayName: 'node',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/__tests__/admin/**/*.(test|spec).(js|jsx|ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/__tests__/admin/setup.js'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+      preset: 'ts-jest',
+      extensionsToTreatAsEsm: ['.ts', '.tsx'],
+      globals: {
+        'ts-jest': {
+          useESM: true
+        }
+      }
+    }
   ],
   
   // Playwright テストを除外
