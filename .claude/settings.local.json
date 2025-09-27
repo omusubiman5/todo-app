@@ -81,7 +81,8 @@
       "Bash(vercel logs:*)",
       "Bash(npx vercel:*)",
       "Bash(gh api:*)",
-      "Bash(timeout 60 npm run build)"
+      "Bash(timeout 60 npm run build)",
+      "Bash(timeout 30 npm run build)"
     ],
     "deny": []
   }

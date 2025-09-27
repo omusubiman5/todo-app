@@ -1,5 +1,3 @@
-"use client";
-
 import { Metadata } from 'next';
 import { SharedTask, WorkspaceContext } from '@/lib/types';
 

@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/components/AuthProvider";
+
+export const dynamic = 'force-dynamic';
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 

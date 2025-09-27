@@ -51,3 +51,6 @@ Sentry.init({
     },
   },
 });
+
+// Next.js 15 required: Router transition tracking
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
