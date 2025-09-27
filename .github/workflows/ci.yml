@@ -35,17 +35,25 @@ jobs:
       - name: 📥 Install Dependencies
         run: npm ci
         
-      # 4️⃣ TypeScript型チェック（警告レベル）
+      # 4️⃣ 環境変数設定
+      - name: 🔧 Environment Variables
+        run: |
+          echo "SKIP_ENV_VALIDATION=true" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-key" >> $GITHUB_ENV
+
+      # 5️⃣ TypeScript型チェック（警告レベル）
       - name: 🔍 TypeScript Check
         run: npm run type-check || echo "TypeScript errors found but continuing..."
         continue-on-error: true
-        
-      # 5️⃣ ESLint実行（警告レベル）
+
+      # 6️⃣ ESLint実行（警告レベル）
       - name: 🧹 ESLint Check
         run: npm run lint || echo "ESLint errors found but continuing..."
         continue-on-error: true
           
-      # 6️⃣ ビルドテスト（必須）
+      # 7️⃣ ビルドテスト（必須）
       - name: 🏗️ Build Test
         run: npm run build
         env:

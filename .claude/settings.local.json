@@ -75,7 +75,9 @@
       "SlashCommand(/sc:analyze . --focus performance)",
       "SlashCommand(/sc:test . --coverage)",
       "SlashCommand(/sc:build . --type prod --optimize)",
-      "SlashCommand(/sc:document changelog --type release)"
+      "SlashCommand(/sc:document changelog --type release)",
+      "Bash(gh run list:*)",
+      "Bash(gh repo view:*)"
     ],
     "deny": []
   }
