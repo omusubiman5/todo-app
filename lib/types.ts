@@ -518,6 +518,14 @@ export interface AdminAuditLogsRequest {
   };
 }
 
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+  has_more: boolean;
+}
+
 export interface AdminAuditLogsResponse {
   logs: AdminAuditLogEntry[];
   pagination: PaginationInfo;

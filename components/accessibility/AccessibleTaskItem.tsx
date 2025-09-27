@@ -164,7 +164,7 @@ const AccessibleTaskItem = React.forwardRef<HTMLDivElement, AccessibleTaskItemPr
               e.stopPropagation();
               onToggleComplete(task.id, !task.completed);
             }}
-            aria-pressed={completionConfig.ariaPressed}
+            aria-pressed={completionConfig.ariaPressed === 'true'}
             aria-label={`タスク「${task.text}」を${task.completed ? '未完了' : '完了'}にする`}
             className={`
               mr-3 p-2 rounded-full transition-all duration-200

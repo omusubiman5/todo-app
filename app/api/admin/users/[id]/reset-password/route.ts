@@ -26,7 +26,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 管理者認証
   const authResult = await adminAuthMiddleware(req, 'users.password_reset');
@@ -35,7 +35,8 @@ export async function POST(
   }
 
   const { admin, clientInfo } = authResult;
-  const targetUserId = params.id;
+  const resolvedParams = await params;
+  const targetUserId = resolvedParams.id;
 
   try {
     // リクエストボディ解析

@@ -1,32 +1,53 @@
-// This file configures the initialization of Sentry on the client.
-// The added config here will be used whenever a users loads a page in their browser.
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
-
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: "https://af5ec933a82bf7bc9a15de6ece938cee@o4510030489124864.ingest.us.sentry.io/4510033546248192",
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Add optional integrations for additional features
-  integrations: [
-    Sentry.replayIntegration(),
-  ],
+  // パフォーマンストレーシング設定
+  tracesSampleRate: 1.0,
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
+  // デバッグモード（開発時のみ）
+  debug: process.env.NODE_ENV === 'development',
 
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
+  // エラー前後のパンくずリスト数
+  beforeBreadcrumb(breadcrumb, hint) {
+    // コンソールログは記録しない（ノイズ削減）
+    if (breadcrumb.category === 'console') {
+      return null;
+    }
+    return breadcrumb;
+  },
 
-  // Define how likely Replay events are sampled when an error occurs.
-  replaysOnErrorSampleRate: 1.0,
+  // エラーフィルタリング
+  beforeSend(event, hint) {
+    // 開発環境では送信しない
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Sentry event (dev):', event);
+      return null;
+    }
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+    // 特定のエラーを除外
+    if (event.exception) {
+      const error = hint.originalException;
+      // ネットワークエラーやキャンセルされたリクエストを除外
+      if (error?.name === 'AbortError' || error?.name === 'NetworkError') {
+        return null;
+      }
+    }
+
+    return event;
+  },
+
+  // リリース情報
+  release: process.env.NEXT_PUBLIC_APP_VERSION || 'development',
+
+  // 環境情報
+  environment: process.env.NODE_ENV || 'development',
+
+  // ユーザーコンテキスト自動設定
+  initialScope: {
+    tags: {
+      component: 'frontend',
+    },
+  },
 });
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
