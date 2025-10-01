@@ -3,13 +3,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
-import { 
-  mapSupabaseError, 
-  validateAuthInput, 
-  AuthSecurityMonitor, 
+import {
+  mapSupabaseError,
+  validateAuthInput,
+  AuthSecurityMonitor,
   logAuthEvent,
-  type AuthError 
+  type AuthError
 } from '@/lib/authErrors';
+import LoginAttemptService from '@/lib/services/loginAttemptService';
 import { FaEye, FaEyeSlash, FaExclamationTriangle, FaShieldAlt, FaSpinner, FaCheckCircle, FaKey, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
 
 // hCaptchaを動的インポート（SSRを回避）
@@ -111,16 +112,42 @@ export default function SecureLoginForm({
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formState.isLoading || formState.rateLimited) return;
 
     // Client-side validation
     if (!validateForm()) return;
 
+    // Get client IP address
+    const clientIP = await LoginAttemptService.getClientIP();
+
+    // Check if IP is blocked before proceeding
+    const blockInfo = await LoginAttemptService.getBlockInfo(clientIP);
+    if (blockInfo?.blocked) {
+      const blockedError: AuthError = {
+        code: 'ip_blocked',
+        message: 'IP address blocked',
+        severity: 'error',
+        userMessage: blockInfo.blockedUntil
+          ? `IPアドレスが一時的にブロックされています。${blockInfo.remainingMinutes}分後に再試行してください。`
+          : 'IPアドレスがブロックされています。管理者にお問い合わせください。'
+      };
+
+      setFormState(prev => ({
+        ...prev,
+        error: blockedError,
+        rateLimited: true,
+        retryAfter: blockInfo.remainingMinutes || 300
+      }));
+
+      onError?.(blockedError);
+      return;
+    }
+
     // Captcha validation (skip in development if configured)
     const skipCaptcha = process.env.NEXT_PUBLIC_SKIP_CAPTCHA === 'true' || process.env.NEXT_PUBLIC_DEV_MODE === 'true';
     const captchaToken = skipCaptcha ? 'dev-bypass-token' : formState.captchaToken;
-    
+
     if (!skipCaptcha && !formState.captchaToken) {
       const captchaError: AuthError = {
         code: 'captcha_required',
@@ -128,13 +155,13 @@ export default function SecureLoginForm({
         severity: 'warning',
         userMessage: 'セキュリティ認証が必要です。Captchaを完了してください。'
       };
-      
+
       setFormState(prev => ({ ...prev, error: captchaError }));
       onError?.(captchaError);
       return;
     }
 
-    // Check rate limiting
+    // Check rate limiting (legacy system - keeping for compatibility)
     const rateCheck = securityMonitor.checkRateLimit(formState.email);
     if (!rateCheck.allowed) {
       const rateLimitError: AuthError = {
@@ -143,14 +170,14 @@ export default function SecureLoginForm({
         severity: 'warning',
         userMessage: 'ログイン試行回数が制限を超えました。しばらく時間をおいてから再度お試しください。'
       };
-      
+
       setFormState(prev => ({
         ...prev,
         error: rateLimitError,
         rateLimited: true,
         retryAfter: rateCheck.retryAfter || 300
       }));
-      
+
       onError?.(rateLimitError);
       return;
     }
@@ -181,7 +208,7 @@ export default function SecureLoginForm({
             data: {
               email_confirm: true
             },
-            captchaToken: captchaToken
+            captchaToken: captchaToken || undefined
           }
         });
       } else {
@@ -190,7 +217,7 @@ export default function SecureLoginForm({
           email: formState.email.trim().toLowerCase(),
           password: formState.password,
           options: {
-            captchaToken: captchaToken
+            captchaToken: captchaToken || undefined
           }
         });
       }
@@ -204,37 +231,73 @@ export default function SecureLoginForm({
         console.error('- Code:', error.code);
         console.error('- Status:', error.status);
         console.error('- Full error object:', error);
-        
+
+        // Record failed login attempt in database
+        const attemptResult = await LoginAttemptService.recordAttempt(
+          clientIP,
+          formState.email,
+          navigator.userAgent,
+          false
+        );
+
         // Map and handle error securely
         const authError = mapSupabaseError(error);
         console.log('🔄 Mapped auth error:', authError);
-        
-        setFormState(prev => ({ ...prev, error: authError, isLoading: false }));
-        onError?.(authError);
-        
-        // Record failed attempt for rate limiting
+
+        // If the attempt resulted in a block, show block message
+        if (attemptResult.blocked) {
+          const blockError: AuthError = {
+            code: 'ip_blocked_after_attempt',
+            message: 'IP blocked due to failed attempts',
+            severity: 'error',
+            userMessage: attemptResult.message || 'ログイン試行回数の上限に達したため、IPアドレスがブロックされました。'
+          };
+
+          setFormState(prev => ({
+            ...prev,
+            error: blockError,
+            isLoading: false,
+            rateLimited: true,
+            retryAfter: attemptResult.blockDuration || 300
+          }));
+
+          onError?.(blockError);
+        } else {
+          setFormState(prev => ({ ...prev, error: authError, isLoading: false }));
+          onError?.(authError);
+        }
+
+        // Record failed attempt for rate limiting (legacy system)
         securityMonitor.recordFailedAttempt(formState.email);
-        
+
         // Log failure (no sensitive data)
         logAuthEvent('login_failure', {
           email: formState.email,
           errorCode: authError.code,
           userAgent: navigator.userAgent
         });
-        
+
         return;
       }
 
       // Success
       if (data.user && data.session) {
         console.log('🎉 Login successful, setting up session persistence');
-        
+
+        // Record successful login attempt in database
+        await LoginAttemptService.recordAttempt(
+          clientIP,
+          formState.email,
+          navigator.userAgent,
+          true
+        );
+
         // 🚨 セキュリティ修正: ローカルストレージ保存を無効化
         console.log('🔒 Security: Local storage session save disabled');
-        
-        // Record successful attempt (reset rate limiting)
+
+        // Record successful attempt (reset rate limiting - legacy system)
         securityMonitor.recordSuccessfulAttempt(formState.email);
-        
+
         // Log success
         logAuthEvent('login_success', {
           userId: data.user.id,
@@ -242,14 +305,14 @@ export default function SecureLoginForm({
           userAgent: navigator.userAgent
         });
 
-        setFormState(prev => ({ 
-          ...prev, 
-          isLoading: false, 
+        setFormState(prev => ({
+          ...prev,
+          isLoading: false,
           error: null,
           email: '',
           password: ''
         }));
-        
+
         // 少し遅延してからonSuccessを呼び出し、セッション保存を確実にする
         setTimeout(() => {
           onSuccess?.();
@@ -263,7 +326,7 @@ export default function SecureLoginForm({
       console.error('- Error type:', typeof error);
       console.error('- Error name:', error.name);
       console.error('- Error message:', error.message);
-      console.error('- Error stack:', err.stack);
+      console.error('- Error stack:', err instanceof Error ? err.stack : 'No stack trace');
       console.error('- Full error object:', err);
       console.error('- Network online:', navigator.onLine);
       

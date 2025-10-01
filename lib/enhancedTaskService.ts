@@ -82,7 +82,7 @@ export interface TaskFilter {
   due_from?: string;
   due_to?: string;
   has_due_date?: boolean;
-  custom_field_filters?: Record<string, string | number | boolean>;
+  custom_field_filters?: Record<string, string | number | boolean | null>;
   limit?: number;
   offset?: number;
 }
@@ -195,7 +195,7 @@ export class EnhancedTaskService {
     updates: Partial<EnhancedTask>,
     userId: string
   ): Promise<EnhancedTask> {
-    const updateData: unknown = { ...updates };
+    const updateData: Record<string, unknown> = { ...updates };
     
     // completed_atの自動設定
     if (updates.status === 'completed' && !updateData.completed_at) {
@@ -480,41 +480,42 @@ export class EnhancedTaskService {
    * タスクデータの正規化
    */
   private static normalizeTask(rawTask: unknown): EnhancedTask {
+    const task = rawTask as Record<string, unknown>; // Type assertion to access properties
     return {
-      id: rawTask.id,
-      title: rawTask.title,
-      description: rawTask.description,
-      status: rawTask.status,
-      priority: rawTask.priority,
-      user_id: rawTask.user_id,
-      team_id: rawTask.team_id,
-      assigned_to: rawTask.assigned_to,
-      created_by: rawTask.created_by,
-      due_date: rawTask.due_date,
-      completed_at: rawTask.completed_at,
-      created_at: rawTask.created_at,
-      updated_at: rawTask.updated_at,
-      custom_fields: rawTask.custom_fields || {},
+      id: task.id as string,
+      title: task.title as string,
+      description: task.description as string,
+      status: (task.status as "completed" | "pending" | "in_progress") || "pending",
+      priority: task.priority as Priority,
+      user_id: task.user_id as string,
+      team_id: task.team_id as string,
+      assigned_to: (task.assigned_to as string | null | undefined) || null,
+      created_by: task.created_by as string | undefined,
+      due_date: task.due_date as string | undefined,
+      completed_at: (task.completed_at as string | null | undefined) || undefined,
+      created_at: task.created_at as string,
+      updated_at: task.updated_at as string,
+      custom_fields: (task.custom_fields as Record<string, string | number | boolean | null>) || {},
       
-      creator: rawTask.creator ? {
-        id: rawTask.creator.id,
-        email: rawTask.creator.email || 'unknown@example.com',
-        display_name: rawTask.creator.display_name || rawTask.creator.email || 'Unknown User'
+      creator: task.creator ? {
+        id: (task.creator as Record<string, unknown>).id as string,
+        email: ((task.creator as Record<string, unknown>).email as string) || 'unknown@example.com',
+        display_name: ((task.creator as Record<string, unknown>).display_name as string) || ((task.creator as Record<string, unknown>).email as string) || 'Unknown User'
       } : undefined,
       
-      assignee: rawTask.assignee ? {
-        id: rawTask.assignee.id,
-        email: rawTask.assignee.email || 'unknown@example.com',
-        display_name: rawTask.assignee.display_name || rawTask.assignee.email || 'Unknown User'
+      assignee: task.assignee ? {
+        id: (task.assignee as Record<string, unknown>).id as string,
+        email: ((task.assignee as Record<string, unknown>).email as string) || 'unknown@example.com',
+        display_name: ((task.assignee as Record<string, unknown>).display_name as string) || ((task.assignee as Record<string, unknown>).email as string) || 'Unknown User'
       } : null,
       
-      team: rawTask.team ? {
-        id: rawTask.team.id,
-        name: rawTask.team.name
+      team: task.team ? {
+        id: (task.team as Record<string, unknown>).id as string,
+        name: (task.team as Record<string, unknown>).name as string
       } : null,
       
-      comment_count: rawTask.comment_count || 0,
-      days_until_due: rawTask.days_until_due
+      comment_count: (task.comment_count as number) || 0,
+      days_until_due: task.days_until_due as number | undefined
     };
   }
 

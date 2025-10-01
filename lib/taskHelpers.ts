@@ -51,7 +51,7 @@ export const getStatusDisplayName = (status: TaskStatus): string => {
     in_progress: '進行中',
     completed: '完了'
   };
-  return statusNames[status];
+  return statusNames[status] || '不明';
 };
 
 /**
@@ -60,10 +60,10 @@ export const getStatusDisplayName = (status: TaskStatus): string => {
 export const getStatusColor = (status: TaskStatus): string => {
   const statusColors: Record<TaskStatus, string> = {
     pending: '#6b7280', // gray-500
-    in_progress: '#3b82f6', // blue-500  
+    in_progress: '#3b82f6', // blue-500
     completed: '#10b981' // green-500
   };
-  return statusColors[status];
+  return statusColors[status] || '#6b7280';
 };
 
 /**
@@ -75,7 +75,7 @@ export const getNextStatus = (currentStatus: TaskStatus): TaskStatus | null => {
     in_progress: 'completed',
     completed: null // 完了済みは次のステータスなし
   };
-  return workflow[currentStatus];
+  return workflow[currentStatus] ?? null;
 };
 
 /**
@@ -87,7 +87,7 @@ export const getPreviousStatus = (currentStatus: TaskStatus): TaskStatus | null 
     in_progress: 'pending',
     completed: 'in_progress'
   };
-  return reverseWorkflow[currentStatus];
+  return reverseWorkflow[currentStatus] ?? null;
 };
 
 /**
@@ -115,7 +115,7 @@ export const canChangeStatus = (
     completed: ['pending', 'in_progress']
   };
 
-  return validTransitions[fromStatus].includes(toStatus);
+  return (validTransitions[fromStatus] || []).includes(toStatus);
 };
 
 /**

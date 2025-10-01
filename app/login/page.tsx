@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import SecureLoginForm from "@/components/SecureLoginForm";
 import { type AuthError } from "@/lib/authErrors";
 import { FaExclamationTriangle, FaShieldAlt } from "react-icons/fa";
+import Link from "next/link";
 
 function LoginContent() {
   const router = useRouter();
@@ -27,8 +28,7 @@ function LoginContent() {
     // Monitor auth state for automatic redirect
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && event === 'SIGNED_IN') {
-        // Clear any errors on successful login
-        setAuthError(null);
+        // Clear any messages on successful login
         setMessage(null);
         
         // Redirect to intended page or home
@@ -47,8 +47,8 @@ function LoginContent() {
     router.replace(redirectTo);
   };
 
-  const handleLoginError = (error: AuthError) => {
-    setAuthError(error);
+  const handleLoginError = (_error: AuthError) => {
+    // The SecureLoginForm component handles error display
     // Clear URL message when showing auth error
     if (message) {
       setMessage(null);
@@ -91,6 +91,16 @@ function LoginContent() {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Registration Link */}
+        <div className="mt-6 text-center">
+          <p className="text-white/80 text-sm">
+            アカウントをお持ちでない方は{" "}
+            <Link href="/register" className="text-white font-medium hover:underline">
+              新規登録
+            </Link>
+          </p>
         </div>
       </div>
     </div>

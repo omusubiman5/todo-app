@@ -141,8 +141,8 @@ export async function getUserTeams(): Promise<UserTeams> {
 
     return {
       owned_teams: ownedTeams || [],
-      member_teams: memberTeams,
-      guest_teams: guestTeams
+      member_teams: (memberTeams as unknown as Team[]) || [],
+      guest_teams: (guestTeams as unknown as Team[]) || []
     };
   } catch (error) {
     console.error('Error in getUserTeams:', error);
@@ -176,24 +176,30 @@ export async function getTeamDetails(teamId: string): Promise<TeamWithMembers> {
   const { data: { user: currentUser } } = await supabase.auth.getUser();
   console.log('Current user for owner check:', currentUser?.id);
 
-  // メンバーにユーザー情報を追加（プロフィール情報も含む）
+  // メンバーにユーザー情報を追加（プロフィール情報も含む） - N+1クエリ問題を修正
   const membersWithUser = [];
-  if (members) {
+  if (members && members.length > 0) {
+    // 全メンバーのプロフィール情報を一括取得
+    const memberUserIds = members.map(member => member.user_id);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', memberUserIds);
+
+    console.log('Bulk profiles query result:', { profiles, memberCount: members.length });
+
+    // プロフィール情報をマップ化
+    const profilesMap = new Map();
+    if (profiles) {
+      profiles.forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
+    }
+
+    // メンバー情報にプロフィールを結合
     for (const member of members) {
       const isCurrentUser = member.user_id === currentUser?.id;
-      
-      // プロフィール情報を取得
-      let profileData = null;
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', member.user_id)
-          .single();
-        profileData = profile;
-      } catch (error) {
-        console.log(`Profile not found for user ${member.user_id}`);
-      }
+      const profileData = profilesMap.get(member.user_id);
 
       membersWithUser.push({
         ...member,
@@ -416,11 +422,19 @@ export const PERMISSIONS = {
 
 // 特定の操作の権限チェック
 export async function hasPermission(teamId: string, action: keyof typeof PERMISSIONS): Promise<boolean> {
+  // Validate action to prevent object injection
+  if (!action || typeof action !== 'string' || !(action in PERMISSIONS)) {
+    return false;
+  }
   const allowedRoles = PERMISSIONS[action];
   return await checkTeamPermission(teamId, allowedRoles);
 }
 
 // 階層的権限チェック（より高い権限があるかどうか）
 export function hasHigherRole(userRole: TeamMember['role'], targetRole: TeamMember['role']): boolean {
-  return ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[targetRole];
+  // Validate roles to prevent object injection
+  if (!userRole || !targetRole || !(userRole in ROLE_HIERARCHY) || !(targetRole in ROLE_HIERARCHY)) {
+    return false;
+  }
+  return (ROLE_HIERARCHY[userRole] || 0) > (ROLE_HIERARCHY[targetRole] || 0);
 } 

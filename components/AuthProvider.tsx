@@ -21,8 +21,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children, requireAuth = false }: { children: ReactNode; requireAuth?: boolean }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    // In development mode, start with demo user to prevent redirect timing issues
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        id: 'demo-user',
+        email: 'demo@example.com',
+        user_metadata: {
+          full_name: 'デモユーザー',
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as User;
+    }
+    return null;
+  });
+  const [session, setSession] = useState<Session | null>(() => {
+    // In development mode, start with demo session to prevent redirect timing issues
+    if (process.env.NODE_ENV === 'development') {
+      const testUser = {
+        id: 'demo-user',
+        email: 'demo@example.com',
+        user_metadata: {
+          full_name: 'デモユーザー',
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as User;
+      
+      return {
+        user: testUser,
+        access_token: 'demo-token',
+        refresh_token: 'demo-refresh',
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: 'bearer'
+      } as Session;
+    }
+    return null;
+  });
   const [sessionExpiry, setSessionExpiry] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true); // セッション取得まで loading=true に戻す
   const [sessionCheckInterval, setSessionCheckInterval] = useState<NodeJS.Timeout | null>(null);
@@ -119,6 +156,30 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
           setSessionExpiry(new Date(data.session.expires_at * 1000));
         }
         
+        // 開発環境: セッションがない場合はテストユーザーを設定
+        if (!data.session && process.env.NODE_ENV === 'development') {
+          console.log('🔧 開発環境: テストユーザーを設定');
+          const testUser = {
+            id: 'demo-user',
+            email: 'demo@example.com',
+            user_metadata: {
+              full_name: 'デモユーザー',
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as User;
+          
+          setUser(testUser);
+          setSession({
+            user: testUser,
+            access_token: 'demo-token',
+            refresh_token: 'demo-refresh',
+            expires_in: 3600,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+            token_type: 'bearer'
+          } as Session);
+        }
+        
         setLoading(false);
         devLog('Session initialization completed');
         
@@ -126,9 +187,33 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
         console.error('Session initialization error:', error instanceof Error ? error.message : String(error));
         
         if (isMounted) {
-          setSession(null);
-          setUser(null);
-          setSessionExpiry(null);
+          // 開発環境: エラー時でもテストユーザーを設定
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔧 開発環境: エラー時もテストユーザーを設定');
+            const testUser = {
+              id: 'demo-user',
+              email: 'demo@example.com',
+              user_metadata: {
+                full_name: 'デモユーザー',
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as User;
+            
+            setUser(testUser);
+            setSession({
+              user: testUser,
+              access_token: 'demo-token',
+              refresh_token: 'demo-refresh',
+              expires_in: 3600,
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+              token_type: 'bearer'
+            } as Session);
+          } else {
+            setSession(null);
+            setUser(null);
+            setSessionExpiry(null);
+          }
           setLoading(false);
         }
       }
@@ -281,7 +366,10 @@ export function AuthProvider({ children, requireAuth = false }: { children: Reac
 
   // Session validity check
   const currentSessionValid = isSessionValid();
-  const shouldShowChildren = !requireAuth || (requireAuth && !loading && user && currentSessionValid);
+  
+  // 開発環境: 認証完全スルーモード
+  const bypassAuth = process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true';
+  const shouldShowChildren = bypassAuth || !requireAuth || (requireAuth && !loading && user && currentSessionValid);
 
   return (
     <AuthContext.Provider value={{ 

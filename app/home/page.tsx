@@ -1,16 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { FaRocket, FaMoon, FaSun, FaWifi, FaExclamationTriangle, FaUser, FaSignOutAlt, FaKey } from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import Navigation from "@/components/Navigation";
-import SharedTaskBoard from "@/components/SharedTaskBoard";
-import NotificationCenter from "@/components/NotificationCenter";
+
+// 🚀 改善された動的インポートで最適なコード分割
+const SharedTaskBoard = dynamic(() => import("@/components/SharedTaskBoard"), {
+  loading: () => <div className="flex items-center justify-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+    <span className="ml-3 text-white">タスクボードを読み込み中...</span>
+  </div>,
+  ssr: false
+});
+
+// 統計ダッシュボードの遅延読み込み（必要時のみ） - 現在は未使用
+// const TaskStats = dynamic(() => import("@/components/LazyComponents").then(mod => ({ default: mod.LazyTaskStatsDashboard })), {
+//   loading: () => (
+//     <div className="animate-pulse space-y-4">
+//       <div className="h-8 bg-white/20 rounded w-1/3"></div>
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//         <div className="h-32 bg-white/20 rounded"></div>
+//         <div className="h-32 bg-white/20 rounded"></div>
+//         <div className="h-32 bg-white/20 rounded"></div>
+//       </div>
+//     </div>
+//   ),
+//   ssr: false
+// });
+
+const NotificationCenter = dynamic(() => import("@/components/LazyComponents").then(mod => ({ default: mod.LazyNotificationCenter })), {
+  loading: () => <div className="animate-pulse w-12 h-12 bg-white/20 rounded-full"></div>,
+  ssr: false
+});
 
 const DARK_MODE_KEY = 'todo-app-dark-mode';
 
@@ -271,7 +299,16 @@ export default function Home() {
         </div>
 
         {/* 共有タスクボード */}
-        <SharedTaskBoard darkMode={darkMode} />
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-white text-lg">タスクボードを読み込み中...</p>
+            </div>
+          </div>
+        }>
+          <SharedTaskBoard darkMode={darkMode} />
+        </Suspense>
       </div>
     </div>
     </>

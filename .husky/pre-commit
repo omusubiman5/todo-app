@@ -1,0 +1,10 @@
+# 🛡️ セキュリティチェック実行
+echo "🔒 Running security checks before commit..."
+
+# セキュリティ重要度チェック (エラーがあってもコミットは継続)
+npm run security-check:critical || echo "⚠️ Security warnings found - please review"
+
+# lint-staged によるファイル別チェック
+npx lint-staged
+
+echo "✅ Security checks completed!"

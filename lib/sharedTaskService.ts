@@ -1,9 +1,29 @@
 import { supabase } from './supabase';
-import { SharedTask, TaskComment, TaskHistory, Notification, WorkspaceContext } from './types';
+import { SharedTask, TaskComment, TaskHistory, Notification, WorkspaceContext, PaginationOptions, PaginatedTasksResult } from './types';
 
 export class SharedTaskService {
-  // タスク取得（個人 or チーム）
-  static async getTasks(workspace: WorkspaceContext, userId: string): Promise<SharedTask[]> {
+  // タスク取得（個人 or チーム）- 旧インターフェース
+  static async getTasks(workspace: WorkspaceContext, userId: string): Promise<SharedTask[]>;
+  
+  // タスク取得（ページング対応）- 新インターフェース
+  static async getTasks(workspace: WorkspaceContext, userId: string, options: PaginationOptions): Promise<PaginatedTasksResult>;
+  
+  // 実装
+  static async getTasks(
+    workspace: WorkspaceContext, 
+    userId: string, 
+    options?: PaginationOptions
+  ): Promise<SharedTask[] | PaginatedTasksResult> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 50;
+    const offset = (page - 1) * limit;
+
+    // Count query for pagination
+    let countQuery = supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true });
+
+    // Data query
     let query = supabase
       .from('tasks')
       .select(`
@@ -18,31 +38,84 @@ export class SharedTaskService {
         created_at, 
         updated_at
       `)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
+    // Apply workspace filtering to both queries
     if (workspace.type === 'personal') {
-      // 個人タスクの場合: user_idが一致し、team_idがnullまたは未設定
+      countQuery = countQuery.eq('user_id', userId).is('team_id', null);
       query = query.eq('user_id', userId).is('team_id', null);
       console.log('🔍 個人タスクフィルター適用:', { userId, workspace });
     } else if (workspace.type === 'team' && workspace.team_id) {
-      // チームタスクの場合: team_idが一致する
+      countQuery = countQuery.eq('team_id', workspace.team_id);
       query = query.eq('team_id', workspace.team_id);
       console.log('🔍 チームタスクフィルター適用:', { team_id: workspace.team_id, workspace });
     } else {
       console.warn('⚠️ 無効なワークスペース設定:', workspace);
       // 無効な場合は空の結果を返す
-      return [];
+      return options ? {
+        tasks: [],
+        hasMore: false,
+        totalCount: 0,
+        currentPage: page
+      } : [];
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    // Apply additional filters if provided
+    if (options?.status) {
+      const completed = options.status === 'completed';
+      countQuery = countQuery.eq('completed', completed);
+      query = query.eq('completed', completed);
+    }
+
+    if (options?.priority) {
+      countQuery = countQuery.eq('priority', options.priority);
+      query = query.eq('priority', options.priority);
+    }
+
+    if (options?.assigned_to) {
+      countQuery = countQuery.eq('assigned_to', options.assigned_to);
+      query = query.eq('assigned_to', options.assigned_to);
+    }
+
+    // Apply pagination only for paginated requests
+    if (options) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    // Execute queries
+    console.log('🔄 SQLクエリ実行開始...', {
+      workspace,
+      userId,
+      queryFilters: workspace.type === 'personal' ? 
+        `user_id=${userId}, team_id=null` : 
+        `team_id=${workspace.team_id}`
+    });
     
-    // 担当者・作成者情報を後から取得（簡易版）
+    const [{ count, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query
+    ]);
+
+    console.log('📊 SQLクエリ実行結果:', { 
+      dataCount: data?.length || 0, 
+      error: error?.message || null, 
+      count, 
+      countError: countError?.message || null 
+    });
+
+    if (error) {
+      console.error('🚨 データクエリエラー詳細:', error);
+      throw error;
+    }
+    if (countError) {
+      console.error('🚨 カウントクエリエラー詳細:', countError);
+      throw countError;
+    }
+
+    // Transform tasks
     const tasks = (data || []).map(task => ({
       ...task,
-      // textフィールドをそのまま使用（titleは存在しない）
       text: task.text,
-      // created_byが未設定の場合はuser_idで補完
       created_by: task.created_by || task.user_id,
       assignee: task.assigned_to ? { 
         id: task.assigned_to, 
@@ -55,6 +128,21 @@ export class SharedTaskService {
         user_metadata: { full_name: null, avatar_url: null }
       } : null
     }));
+
+    // Return based on whether pagination was requested
+    if (options) {
+      const totalCount = count || 0;
+      const hasMore = offset + limit < totalCount;
+      const nextCursor = hasMore ? `page-${page + 1}` : undefined;
+
+      return {
+        tasks,
+        hasMore,
+        totalCount,
+        nextCursor,
+        currentPage: page
+      };
+    }
 
     return tasks;
   }
@@ -234,69 +322,111 @@ export class SharedTaskService {
       throw new Error('このタスクを削除する権限がありません');
     }
 
-    // 関連データの事前削除（外部キー制約を回避）
-    console.log('🗑️ タスク削除開始（関連データから削除）');
+    // シンプルな削除アプローチ（CASCADE設定を前提）
+    console.log('🗑️ タスク削除開始（シンプル削除）');
     
     try {
-      // 関連データを先に削除
-      console.log('🧹 関連データ削除開始:', { taskId });
+      // まずタスクの存在確認
+      const { data: existingTask } = await supabase
+        .from('tasks')
+        .select('id, text')
+        .eq('id', taskId)
+        .single();
       
-      // 1. コメントを削除
+      if (!existingTask) {
+        console.log('⚠️ タスクが既に削除済みまたは存在しません:', taskId);
+        return; // エラーではなく正常終了
+      }
+      
+      console.log('🎯 削除対象タスク確認完了:', { taskId, taskText: existingTask.text });
+      
+      // Supabaseのトランザクション内で削除（関連データは自動削除されるはず）
+      console.log('🗑️ メインタスク削除実行:', { taskId });
+      const { data, error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .select();
+
+      console.log('🗑️ SharedTaskService.deleteTask 結果:', { data, error, taskId });
+
+      if (error) {
+        console.error('❌ SharedTaskService.deleteTask エラー:', error);
+        
+        // エラーコード23503は外部キー制約違反
+        if (error.code === '23503') {
+          console.log('🔧 外部キー制約エラーを検出。関連データを先に削除します。');
+          
+          // 関連データを先に削除してリトライ
+          await this.deleteRelatedDataFirst(taskId);
+          
+          // 再度メインタスクを削除
+          const { data: retryData, error: retryError } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', taskId)
+            .select();
+            
+          if (retryError) {
+            console.error('❌ リトライ後もタスク削除失敗:', retryError);
+            throw retryError;
+          }
+          
+          console.log('✅ リトライでタスク削除成功:', { deletedData: retryData, taskId });
+          return;
+        }
+        
+        throw error;
+      }
+      
+      console.log('✅ SharedTaskService.deleteTask 成功:', { deletedData: data, taskId });
+      
+    } catch (deleteError) {
+      console.error('❌ タスク削除処理でエラー:', deleteError);
+      throw deleteError;
+    }
+  }
+
+  // 関連データの手動削除メソッド
+  private static async deleteRelatedDataFirst(taskId: string): Promise<void> {
+    console.log('🧹 関連データの手動削除開始:', { taskId });
+    
+    try {
+      // 1. コメント削除
       const { error: commentsError } = await supabase
         .from('task_comments')
         .delete()
         .eq('task_id', taskId);
       
-      if (commentsError && commentsError.code !== 'PGRST116') { // PGRST116 = データが見つからない（正常）
-        console.warn('⚠️ コメント削除警告（継続）:', commentsError);
-      } else {
-        console.log('✅ タスクコメント削除完了');
+      if (commentsError && commentsError.code !== 'PGRST116') {
+        console.warn('⚠️ コメント削除警告:', commentsError);
       }
       
-      // 2. 履歴を削除
+      // 2. 履歴削除  
       const { error: historyError } = await supabase
         .from('task_history')
         .delete()
         .eq('task_id', taskId);
       
       if (historyError && historyError.code !== 'PGRST116') {
-        console.warn('⚠️ 履歴削除警告（継続）:', historyError);
-      } else {
-        console.log('✅ タスク履歴削除完了');
+        console.warn('⚠️ 履歴削除警告:', historyError);
       }
       
-      // 3. 通知を削除（task_idがdataに含まれる通知）
+      // 3. 通知削除
       const { error: notificationsError } = await supabase
         .from('notifications')
         .delete()
-        .ilike('data', `%${taskId}%`);
+        .filter('data', 'cs', `{"task_id":"${taskId}"}`);
       
       if (notificationsError && notificationsError.code !== 'PGRST116') {
-        console.warn('⚠️ 通知削除警告（継続）:', notificationsError);
-      } else {
-        console.log('✅ 関連通知削除完了');
+        console.warn('⚠️ 通知削除警告:', notificationsError);
       }
       
-    } catch (cleanupError) {
-      console.warn('⚠️ 関連データ削除で警告が発生しましたが、メインタスク削除を継続します:', cleanupError);
+      console.log('✅ 関連データの手動削除完了');
+      
+    } catch (error) {
+      console.warn('⚠️ 関連データ削除で警告（継続）:', error);
     }
-    
-    // 4. メインタスクを削除
-    console.log('🎯 メインタスク削除実行:', { taskId });
-    const { data, error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId)
-      .select();
-
-    console.log('🗑️ SharedTaskService.deleteTask 結果:', { data, error, taskId });
-
-    if (error) {
-      console.error('❌ SharedTaskService.deleteTask エラー:', error);
-      throw error;
-    }
-    
-    console.log('✅ SharedTaskService.deleteTask 成功:', { deletedData: data, taskId });
   }
 
   // タスク担当者設定
@@ -314,30 +444,38 @@ export class SharedTaskService {
     if (error) throw error;
     if (!members) return [];
 
-    // プロフィール情報を別途取得
-    const memberWithProfiles = await Promise.all(
-      members.map(async (member) => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .eq('id', member.user_id)
-          .single();
+    // プロフィール情報を一括取得（N+1クエリ問題修正）
+    const memberUserIds = members.map(member => member.user_id);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', memberUserIds);
 
-        // auth.usersからメール取得（簡易版）
-        return {
-          user_id: member.user_id,
-          role: member.role,
-          user: {
-            id: member.user_id,
-            email: `user-${member.user_id.slice(0, 8)}@example.com`, // プレースホルダー
-            user_metadata: {
-              full_name: profile?.display_name || null,
-              avatar_url: profile?.avatar_url || null
-            }
+    // プロフィール情報をマップ化
+    const profilesMap = new Map();
+    if (profiles) {
+      profiles.forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
+    }
+
+    // メンバー情報にプロフィールを結合
+    const memberWithProfiles = members.map((member) => {
+      const profile = profilesMap.get(member.user_id);
+      
+      return {
+        user_id: member.user_id,
+        role: member.role,
+        user: {
+          id: member.user_id,
+          email: `user-${member.user_id.slice(0, 8)}@example.com`, // プレースホルダー
+          user_metadata: {
+            full_name: profile?.display_name || null,
+            avatar_url: profile?.avatar_url || null
           }
-        };
-      })
-    );
+        }
+      };
+    });
 
     return memberWithProfiles;
   }

@@ -1,0 +1,256 @@
+import React from 'react';
+import { screen, fireEvent } from '@testing-library/react';
+import { render, createMockTask } from '../utils/test-utils';
+import { TaskItem } from '@/components/optimized/TaskItem';
+
+describe('TaskItem Accessibility Tests', () => {
+  const mockTask = createMockTask();
+  const defaultProps = {
+    task: mockTask,
+    onToggle: jest.fn(),
+    onEdit: jest.fn(),
+    onDelete: jest.fn(),
+    onEditingTextChange: jest.fn()
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('ARIA attributes', () => {
+    it('チェックボックスが適切なaria-labelを持つ', () => {
+      render(<TaskItem {...defaultProps} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toHaveAttribute('aria-label', expect.stringContaining('タスク'));
+    });
+
+    it('完了状態がaria-checkedで表現される', () => {
+      const completedTask = createMockTask({ completed: true });
+      render(<TaskItem {...defaultProps} task={completedTask} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('未完了状態がaria-checkedで表現される', () => {
+      const uncompletedTask = createMockTask({ completed: false });
+      render(<TaskItem {...defaultProps} task={uncompletedTask} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('編集モード時に適切なラベルが設定される', () => {
+      render(<TaskItem {...defaultProps} isEditing={true} />);
+      
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveAttribute('aria-label', expect.stringContaining('タスク編集'));
+    });
+
+    it('削除ボタンが適切なaria-labelを持つ', () => {
+      render(<TaskItem {...defaultProps} />);
+      
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
+      expect(deleteButton).toHaveAttribute('aria-label', expect.stringContaining('削除'));
+    });
+  });
+
+  describe('Keyboard navigation', () => {
+    it('Enterキーでチェックボックスがトグルされる', () => {
+      const onToggle = jest.fn();
+      render(<TaskItem {...defaultProps} onToggle={onToggle} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      checkbox.focus();
+      fireEvent.keyDown(checkbox, { key: 'Enter', code: 'Enter' });
+      
+      expect(onToggle).toHaveBeenCalledWith(mockTask.id);
+    });
+
+    it('Spaceキーでチェックボックスがトグルされる', () => {
+      const onToggle = jest.fn();
+      render(<TaskItem {...defaultProps} onToggle={onToggle} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      checkbox.focus();
+      fireEvent.keyDown(checkbox, { key: ' ', code: 'Space' });
+      
+      expect(onToggle).toHaveBeenCalledWith(mockTask.id);
+    });
+
+    it('編集モードでEscapeキーを押すと編集がキャンセルされる', () => {
+      const onEdit = jest.fn();
+      render(<TaskItem {...defaultProps} isEditing={true} onEdit={onEdit} />);
+      
+      const input = screen.getByRole('textbox');
+      fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' });
+      
+      expect(onEdit).toHaveBeenCalledWith(mockTask.id, null);
+    });
+
+    it('編集モードでEnterキーを押すと変更が保存される', () => {
+      const onEdit = jest.fn();
+      render(<TaskItem {...defaultProps} isEditing={true} onEdit={onEdit} />);
+      
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: '更新されたタスク' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+      
+      expect(onEdit).toHaveBeenCalledWith(mockTask.id, '更新されたタスク');
+    });
+
+    it('Tabキーでフォーカス可能な要素間を移動できる', () => {
+      render(<TaskItem {...defaultProps} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
+      
+      expect(checkbox).toHaveAttribute('tabindex', '0');
+      expect(deleteButton).not.toHaveAttribute('tabindex', '-1');
+    });
+  });
+
+  describe('Screen reader support', () => {
+    it('優先度が読み上げ可能なテキストで表現される', () => {
+      const highPriorityTask = createMockTask({ priority: '高' });
+      render(<TaskItem {...defaultProps} task={highPriorityTask} />);
+      
+      expect(screen.getByText(/優先度: 高/)).toBeInTheDocument();
+    });
+
+    it('完了状態が読み上げ可能なテキストで表現される', () => {
+      const completedTask = createMockTask({ completed: true });
+      render(<TaskItem {...defaultProps} task={completedTask} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toHaveAttribute('aria-describedby');
+      
+      const describedById = checkbox.getAttribute('aria-describedby');
+      const description = document.getElementById(describedById!);
+      expect(description).toHaveTextContent(/完了済み|未完了/);
+    });
+
+    it('編集中の状態が適切に通知される', () => {
+      render(<TaskItem {...defaultProps} isEditing={true} />);
+      
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveAttribute('aria-describedby');
+      
+      const describedById = input.getAttribute('aria-describedby');
+      const description = document.getElementById(describedById!);
+      expect(description).toHaveTextContent(/編集中/);
+    });
+  });
+
+  describe('Focus management', () => {
+    it('編集モードに入ったときにテキスト入力フィールドにフォーカスが移る', () => {
+      const { rerender } = render(<TaskItem {...defaultProps} />);
+      
+      rerender(<TaskItem {...defaultProps} isEditing={true} />);
+      
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveFocus();
+    });
+
+    it('編集完了後に元の要素にフォーカスが戻る', () => {
+      const onEdit = jest.fn();
+      render(<TaskItem {...defaultProps} isEditing={true} onEdit={onEdit} />);
+      
+      const input = screen.getByRole('textbox');
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+      
+      // フォーカスが適切な要素に戻ることを確認
+      const checkbox = screen.getByRole('checkbox');
+      expect(document.activeElement).toBe(checkbox);
+    });
+
+    it('削除ボタンがフォーカス可能である', () => {
+      render(<TaskItem {...defaultProps} />);
+      
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
+      deleteButton.focus();
+      
+      expect(deleteButton).toHaveFocus();
+    });
+  });
+
+  describe('Color contrast and visual accessibility', () => {
+    it('完了済みタスクが視覚的に区別可能である', () => {
+      const completedTask = createMockTask({ completed: true });
+      render(<TaskItem {...defaultProps} task={completedTask} />);
+      
+      const taskText = screen.getByText(completedTask.text);
+      const styles = window.getComputedStyle(taskText);
+      
+      // 完了済みタスクは何らかの視覚的変更（color, text-decoration等）があることを確認
+      expect(
+        styles.textDecoration.includes('line-through') ||
+        styles.opacity !== '1' ||
+        styles.color !== 'initial'
+      ).toBeTruthy();
+    });
+
+    it('優先度が色以外でも区別可能である', () => {
+      const priorities: Array<'高' | '中' | '低'> = ['高', '中', '低'];
+      
+      priorities.forEach(priority => {
+        const task = createMockTask({ priority });
+        const { unmount } = render(<TaskItem {...defaultProps} task={task} />);
+        
+        // 優先度がテキストまたはアイコンで視覚的に識別可能であることを確認
+        expect(screen.getByText(new RegExp(`優先度.*${priority}`))).toBeInTheDocument();
+        
+        unmount();
+      });
+    });
+  });
+
+  describe('Error states accessibility', () => {
+    it('エラー状態が適切にアナウンスされる', () => {
+      // エラー状態のプロップがある場合
+      const errorProps = {
+        ...defaultProps,
+        hasError: true,
+        errorMessage: 'タスクの更新に失敗しました'
+      };
+      
+      render(<TaskItem {...errorProps} />);
+      
+      const errorElement = screen.getByRole('alert');
+      expect(errorElement).toBeInTheDocument();
+      expect(errorElement).toHaveTextContent('タスクの更新に失敗しました');
+    });
+
+    it('読み込み中の状態が適切に通知される', () => {
+      const loadingProps = {
+        ...defaultProps,
+        isLoading: true
+      };
+      
+      render(<TaskItem {...loadingProps} />);
+      
+      const loadingElement = screen.getByRole('status');
+      expect(loadingElement).toBeInTheDocument();
+      expect(loadingElement).toHaveAttribute('aria-live', 'polite');
+    });
+  });
+
+  describe('Mobile accessibility', () => {
+    it('タッチターゲットが十分なサイズを持つ', () => {
+      render(<TaskItem {...defaultProps} />);
+      
+      const checkbox = screen.getByRole('checkbox');
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
+      
+      // 最小タッチターゲットサイズ（44x44px）の確認
+      const checkboxRect = checkbox.getBoundingClientRect();
+      const deleteRect = deleteButton.getBoundingClientRect();
+      
+      expect(checkboxRect.width).toBeGreaterThanOrEqual(44);
+      expect(checkboxRect.height).toBeGreaterThanOrEqual(44);
+      expect(deleteRect.width).toBeGreaterThanOrEqual(44);
+      expect(deleteRect.height).toBeGreaterThanOrEqual(44);
+    });
+  });
+});

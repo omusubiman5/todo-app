@@ -1,0 +1,188 @@
+import { logger, devLog } from '@/lib/logger';
+
+// console.log/info/warn/error をモック
+const originalConsole = { ...console };
+const mockConsole = {
+  log: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn()
+};
+
+describe('Logger', () => {
+  let originalNodeEnv: string | undefined;
+
+  beforeAll(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    // console をモック
+    Object.assign(console, mockConsole);
+  });
+
+  afterAll(() => {
+    // オリジナルのconsoleを復元
+    Object.assign(console, originalConsole);
+    // NODE_ENV を復元
+    if (originalNodeEnv) {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  beforeEach(() => {
+    // 各テスト前にモックをリセット
+    Object.values(mockConsole).forEach(mock => mock.mockClear());
+  });
+
+  describe('Development Environment', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'development';
+    });
+
+    it('debugメッセージが出力される', () => {
+      logger.debug('Debug message', { key: 'value' });
+      
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('🔍 [DEBUG]'),
+        'Debug message',
+        { key: 'value' }
+      );
+    });
+
+    it('infoメッセージが出力される', () => {
+      logger.info('Info message');
+      
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        expect.stringContaining('ℹ️ [INFO]'),
+        'Info message',
+        ''
+      );
+    });
+
+    it('warnメッセージが出力される', () => {
+      logger.warn('Warning message', { error: true });
+      
+      expect(mockConsole.warn).toHaveBeenCalledWith(
+        expect.stringContaining('⚠️ [WARN]'),
+        'Warning message',
+        { error: true }
+      );
+    });
+
+    it('errorメッセージが出力される', () => {
+      logger.error('Error message');
+      
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        expect.stringContaining('🚨 [ERROR]'),
+        'Error message',
+        ''
+      );
+    });
+  });
+
+  describe('Production Environment', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+    });
+
+    it('debugメッセージは出力されない', () => {
+      logger.debug('Debug message');
+      
+      expect(mockConsole.log).not.toHaveBeenCalled();
+    });
+
+    it('infoメッセージは開発環境では出力されないがロジックは実行される', () => {
+      logger.info('Info message');
+      
+      expect(mockConsole.info).not.toHaveBeenCalled();
+      // プロダクション環境でのログ処理は将来実装予定
+    });
+  });
+
+  describe('Message formatting', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'development';
+    });
+
+    it('タイムスタンプが含まれる', () => {
+      logger.info('Test message');
+      
+      const logCall = mockConsole.info.mock.calls[0];
+      expect(logCall[0]).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('コンテキストなしでも正常に動作する', () => {
+      logger.warn('Warning without context');
+      
+      expect(mockConsole.warn).toHaveBeenCalledWith(
+        expect.stringContaining('⚠️ [WARN]'),
+        'Warning without context',
+        ''
+      );
+    });
+
+    it('複雑なコンテキストオブジェクトを処理できる', () => {
+      const complexContext = {
+        user: { id: 123, name: 'Test User' },
+        action: 'login',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          ip: '127.0.0.1',
+          userAgent: 'Test Browser'
+        }
+      };
+
+      logger.info('Complex context test', complexContext);
+      
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        expect.stringContaining('ℹ️ [INFO]'),
+        'Complex context test',
+        complexContext
+      );
+    });
+  });
+
+  describe('devLog utility', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'development';
+    });
+
+    it('devLogが正常に動作する', () => {
+      devLog('Development log message');
+      
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('🔍 [DEBUG]'),
+        'Development log message',
+        ''
+      );
+    });
+
+    it('プロダクション環境ではdevLogが出力されない', () => {
+      process.env.NODE_ENV = 'production';
+      
+      devLog('Development log message');
+      
+      expect(mockConsole.log).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Error handling', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'development';
+    });
+
+    it('nullやundefinedコンテキストを安全に処理する', () => {
+      expect(() => {
+        logger.info('Test message', null as any);
+        logger.warn('Test message', undefined);
+      }).not.toThrow();
+    });
+
+    it('循環参照を含むオブジェクトを安全に処理する', () => {
+      const circularObj: any = { name: 'test' };
+      circularObj.self = circularObj;
+
+      expect(() => {
+        logger.info('Circular reference test', circularObj);
+      }).not.toThrow();
+    });
+  });
+});

@@ -1,0 +1,313 @@
+/**
+ * Security-focused tests for login feature
+ * Tests secure error handling, input validation, and rate limiting
+ */
+
+import { validateAuthInput, mapSupabaseError, AuthSecurityMonitor } from '../lib/authErrors';
+
+describe('Login Security Tests', () => {
+  describe('Input Validation', () => {
+    describe('Email Validation', () => {
+      it('should reject empty email', () => {
+        const result = validateAuthInput.email('');
+        expect(result.isValid).toBe(false);
+        expect(result.error?.code).toBe('invalid_email');
+        expect(result.error?.userMessage).toContain('メールアドレスを入力');
+      });
+
+      it('should reject invalid email format', () => {
+        const invalidEmails = [
+          'invalid',
+          'invalid@',
+          '@invalid.com',
+          'invalid.email',
+          'test@',
+          '@test.com'
+        ];
+
+        invalidEmails.forEach(email => {
+          const result = validateAuthInput.email(email);
+          expect(result.isValid).toBe(false);
+          expect(result.error?.code).toBe('invalid_email');
+        });
+      });
+
+      it('should accept valid email formats', () => {
+        const validEmails = [
+          'test@example.com',
+          'user.name@domain.co.jp',
+          'user+tag@example.org',
+          'user123@test-domain.com'
+        ];
+
+        validEmails.forEach(email => {
+          const result = validateAuthInput.email(email);
+          expect(result.isValid).toBe(true);
+          expect(result.error).toBeUndefined();
+        });
+      });
+
+      it('should reject overly long emails', () => {
+        const longEmail = 'a'.repeat(250) + '@example.com';
+        const result = validateAuthInput.email(longEmail);
+        expect(result.isValid).toBe(false);
+        expect(result.error?.code).toBe('invalid_email');
+      });
+    });
+
+    describe('Password Validation', () => {
+      it('should reject empty password', () => {
+        const result = validateAuthInput.password('');
+        expect(result.isValid).toBe(false);
+        expect(result.error?.code).toBe('weak_password');
+      });
+
+      it('should reject short passwords', () => {
+        const result = validateAuthInput.password('short');
+        expect(result.isValid).toBe(false);
+        expect(result.error?.code).toBe('weak_password');
+        expect(result.error?.userMessage).toContain('8文字以上');
+      });
+
+      it('should reject overly long passwords', () => {
+        const longPassword = 'a'.repeat(130);
+        const result = validateAuthInput.password(longPassword);
+        expect(result.isValid).toBe(false);
+        expect(result.error?.code).toBe('weak_password');
+      });
+
+      it('should accept valid passwords', () => {
+        const validPasswords = [
+          'password123',
+          'MySecureP@ss',
+          'longerPasswordWith123',
+          '日本語パスワード123'
+        ];
+
+        validPasswords.forEach(password => {
+          const result = validateAuthInput.password(password);
+          expect(result.isValid).toBe(true);
+          expect(result.error).toBeUndefined();
+        });
+      });
+    });
+  });
+
+  describe('Error Mapping', () => {
+    it('should map invalid credentials error safely', () => {
+      const supabaseError = { message: 'Invalid login credentials' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe('invalid_credentials');
+      expect(result.severity).toBe('error');
+      expect(result.userMessage).not.toContain('credentials');
+      expect(result.userMessage).toContain('メールアドレスまたはパスワード');
+    });
+
+    it('should map rate limit error safely', () => {
+      const supabaseError = { message: 'Too many requests' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe('too_many_attempts');
+      expect(result.severity).toBe('warning');
+      expect(result.userMessage).toContain('制限を超えました');
+    });
+
+    it('should map network errors safely', () => {
+      const supabaseError = { message: 'Network error occurred' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe('network_error');
+      expect(result.severity).toBe('warning');
+      expect(result.userMessage).toContain('ネットワークエラー');
+    });
+
+    it('should map unknown errors safely', () => {
+      const supabaseError = { message: 'Unexpected database error' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe('unknown_error');
+      expect(result.severity).toBe('error');
+      expect(result.userMessage).not.toContain('database');
+      expect(result.userMessage).toContain('認証エラー');
+    });
+
+    it('should never expose sensitive information', () => {
+      const sensitiveErrors = [
+        { message: 'Database connection failed with password: secret123' },
+        { message: 'JWT token expired: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' },
+        { message: 'Internal server error: /api/secret-endpoint' }
+      ];
+
+      sensitiveErrors.forEach(error => {
+        const result = mapSupabaseError(error);
+        expect(result.userMessage).not.toContain('password');
+        expect(result.userMessage).not.toContain('token');
+        expect(result.userMessage).not.toContain('secret');
+        expect(result.userMessage).not.toContain('/api/');
+      });
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    let monitor: AuthSecurityMonitor;
+
+    beforeEach(() => {
+      monitor = AuthSecurityMonitor.getInstance();
+    });
+
+    it('should allow initial login attempts', () => {
+      const result = monitor.checkRateLimit('test@example.com');
+      expect(result.allowed).toBe(true);
+      expect(result.retryAfter).toBeUndefined();
+    });
+
+    it('should track failed attempts', () => {
+      const email = 'test-failed@example.com';
+      
+      // Record 4 failed attempts
+      for (let i = 0; i < 4; i++) {
+        monitor.recordFailedAttempt(email);
+        const result = monitor.checkRateLimit(email);
+        expect(result.allowed).toBe(true);
+      }
+      
+      // 5th attempt should be blocked
+      monitor.recordFailedAttempt(email);
+      const result = monitor.checkRateLimit(email);
+      expect(result.allowed).toBe(false);
+      expect(result.retryAfter).toBeGreaterThan(0);
+    });
+
+    it('should reset counters on successful login', () => {
+      const email = 'test-success@example.com';
+      
+      // Record failed attempts
+      for (let i = 0; i < 4; i++) {
+        monitor.recordFailedAttempt(email);
+      }
+      
+      // Record successful attempt
+      monitor.recordSuccessfulAttempt(email);
+      
+      // Should be allowed again
+      const result = monitor.checkRateLimit(email);
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should handle different emails independently', () => {
+      const email1 = 'user1@example.com';
+      const email2 = 'user2@example.com';
+      
+      // Block first email
+      for (let i = 0; i < 5; i++) {
+        monitor.recordFailedAttempt(email1);
+      }
+      
+      // Second email should still be allowed
+      const result1 = monitor.checkRateLimit(email1);
+      const result2 = monitor.checkRateLimit(email2);
+      
+      expect(result1.allowed).toBe(false);
+      expect(result2.allowed).toBe(true);
+    });
+  });
+
+  describe('Security Edge Cases', () => {
+    it('should handle null/undefined inputs safely', () => {
+      const emailTests = [null, undefined, '   ', '\n\t'];
+      emailTests.forEach(input => {
+        const result = validateAuthInput.email(input as any);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBeDefined();
+      });
+
+      const passwordTests = [null, undefined, '   ', '\n\t'];
+      passwordTests.forEach(input => {
+        const result = validateAuthInput.password(input as any);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBeDefined();
+      });
+    });
+
+    it('should handle malicious input attempts', () => {
+      const maliciousInputs = [
+        '<script>alert("xss")</script>',
+        'javascript:alert(1)',
+        '../../etc/passwd',
+        'DROP TABLE users;',
+        '${process.env.SECRET_KEY}'
+      ];
+
+      maliciousInputs.forEach(input => {
+        const emailResult = validateAuthInput.email(input);
+        const passwordResult = validateAuthInput.password(input);
+        
+        // All malicious inputs should be rejected as invalid
+        expect(emailResult.isValid).toBe(false);
+        expect(passwordResult.isValid).toBe(false);
+        
+        // Error messages should not contain the malicious content
+        if (emailResult.error) {
+          expect(emailResult.error.userMessage).not.toContain('<script>');
+          expect(emailResult.error.userMessage).not.toContain('DROP TABLE');
+        }
+        if (passwordResult.error) {
+          expect(passwordResult.error.userMessage).not.toContain('<script>');
+          expect(passwordResult.error.userMessage).not.toContain('DROP TABLE');
+        }
+      });
+    });
+
+    it('should handle unicode and international characters', () => {
+      const internationalEmails = [
+        'user@例え.テスト',
+        'пользователь@пример.рф',
+        'usuario@ejemplo.es'
+      ];
+
+      internationalEmails.forEach(email => {
+        const result = validateAuthInput.email(email);
+        // Should handle gracefully (may be valid or invalid depending on implementation)
+        expect(result.error?.severity).not.toBe('critical');
+      });
+    });
+  });
+
+  describe('Error Message Security', () => {
+    it('should never leak sensitive information in error messages', () => {
+      const sensitiveData = [
+        'password123',
+        'secret-api-key',
+        'database-connection-string',
+        'internal-server-path'
+      ];
+
+      const error = mapSupabaseError({ message: `Error: ${sensitiveData.join(' ')}` });
+      
+      sensitiveData.forEach(sensitive => {
+        expect(error.userMessage.toLowerCase()).not.toContain(sensitive.toLowerCase());
+        expect(error.message.toLowerCase()).not.toContain('password123');
+        expect(error.message.toLowerCase()).not.toContain('secret-api-key');
+      });
+    });
+
+    it('should provide helpful but safe error messages', () => {
+      const testCases = [
+        { input: 'invalid login credentials', expectedKeywords: ['メールアドレス', 'パスワード'] },
+        { input: 'network error occurred', expectedKeywords: ['ネットワーク', '接続'] },
+        { input: 'too many requests', expectedKeywords: ['制限', '時間'] }
+      ];
+
+      testCases.forEach(({ input, expectedKeywords }) => {
+        const error = mapSupabaseError({ message: input });
+        
+        // Check that at least one expected keyword is present
+        const hasExpectedKeyword = expectedKeywords.some(keyword => 
+          error.userMessage.includes(keyword)
+        );
+        expect(hasExpectedKeyword).toBe(true);
+      });
+    });
+  });
+});

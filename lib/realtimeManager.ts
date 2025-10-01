@@ -1,30 +1,23 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { WorkspaceContext } from './types';
-import { logger } from './logger';
 
-interface RealtimePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-  new?: Record<string, unknown>;
-  old?: Record<string, unknown>;
-  table: string;
-  schema: string;
+export interface RealtimeEvent {
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  record: any;
+  oldRecord?: any;
 }
 
-interface SubscriptionConfig {
-  id: string;
-  table: string;
-  filter?: string;
-  callback: (payload: RealtimePayload | { type: 'batch'; updates: RealtimePayload[] }) => void;
-  reconnectAttempts?: number;
-  maxReconnectAttempts?: number;
+export interface WorkspaceContext {
+  type: 'personal' | 'team';
+  team_id: string | null;
+  team_name?: string | null;
 }
 
 export class RealtimeManager {
   private static instance: RealtimeManager;
   private subscriptions = new Map<string, RealtimeChannel>();
-  private reconnectTimers = new Map<string, NodeJS.Timeout>();
-  private isConnected = true;
+  private eventCallbacks = new Map<string, (event: RealtimeEvent) => void>();
+  private throttleTimers = new Map<string, NodeJS.Timeout>();
 
   static getInstance(): RealtimeManager {
     if (!RealtimeManager.instance) {
@@ -33,231 +26,56 @@ export class RealtimeManager {
     return RealtimeManager.instance;
   }
 
-  private constructor() {
-    this.setupConnectionMonitoring();
-  }
+  private constructor() {}
 
   /**
-   * 接続状態の監視
-   */
-  private setupConnectionMonitoring() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => {
-        this.isConnected = true;
-        logger.info('Network connection restored, reconnecting subscriptions');
-        this.reconnectAllSubscriptions();
-      });
-
-      window.addEventListener('offline', () => {
-        this.isConnected = false;
-        logger.warn('Network connection lost');
-      });
-    }
-  }
-
-  /**
-   * タスクの購読
+   * タスクの購読を開始 (SharedTaskBoard互換)
    */
   subscribeToTasks(
     workspace: WorkspaceContext,
-    callback: (payload: RealtimePayload | { type: 'batch'; updates: RealtimePayload[] }) => void,
-    options: { enableBatching?: boolean; batchDelay?: number } = {}
-  ): string {
-    const { enableBatching = true, batchDelay = 100 } = options;
-    
-    const subscriptionId = `tasks_${workspace.type}_${workspace.team_id || 'personal'}`;
-    
-    // 既存の購読がある場合は削除
-    this.unsubscribe(subscriptionId);
-
-    const filter = workspace.type === 'team' && workspace.team_id
-      ? `team_id=eq.${workspace.team_id}`
-      : `team_id=is.null`;
-
-    let batchedUpdates: RealtimePayload[] = [];
-    let batchTimer: NodeJS.Timeout | null = null;
-
-    const processCallback = enableBatching 
-      ? (payload: RealtimePayload) => {
-          batchedUpdates.push(payload);
-          
-          if (batchTimer) clearTimeout(batchTimer);
-          
-          batchTimer = setTimeout(() => {
-            if (batchedUpdates.length > 0) {
-              callback({ type: 'batch', updates: [...batchedUpdates] });
-              batchedUpdates = [];
-            }
-          }, batchDelay);
-        }
-      : callback;
-
-    const config: SubscriptionConfig = {
-      id: subscriptionId,
-      table: 'tasks',
-      filter,
-      callback: processCallback,
-      reconnectAttempts: 0,
-      maxReconnectAttempts: 5
-    };
-
-    this.createSubscription(config);
-    return subscriptionId;
-  }
-
-  /**
-   * 通知の購読
-   */
-  subscribeToNotifications(
     userId: string,
-    callback: (payload: RealtimePayload) => void
+    callback: (event: RealtimeEvent) => void
   ): string {
-    const subscriptionId = `notifications_${userId}`;
+    const channelId = workspace.type === 'team' && workspace.team_id 
+      ? `team-tasks-${workspace.team_id}` 
+      : `personal-tasks-${userId}`;
     
-    this.unsubscribe(subscriptionId);
+    // 既存の購読があれば削除
+    this.unsubscribe(channelId);
 
-    const config: SubscriptionConfig = {
-      id: subscriptionId,
-      table: 'notifications',
-      filter: `user_id=eq.${userId}`,
-      callback,
-      reconnectAttempts: 0,
-      maxReconnectAttempts: 3
-    };
-
-    this.createSubscription(config);
-    return subscriptionId;
-  }
-
-  /**
-   * チーム情報の購読
-   */
-  subscribeToTeam(
-    teamId: string,
-    callback: (payload: RealtimePayload) => void
-  ): string {
-    const subscriptionId = `team_${teamId}`;
-    
-    this.unsubscribe(subscriptionId);
-
-    const config: SubscriptionConfig = {
-      id: subscriptionId,
-      table: 'teams',
-      filter: `id=eq.${teamId}`,
-      callback,
-      reconnectAttempts: 0,
-      maxReconnectAttempts: 3
-    };
-
-    this.createSubscription(config);
-    return subscriptionId;
-  }
-
-  /**
-   * 購読の作成
-   */
-  private createSubscription(config: SubscriptionConfig) {
     try {
+      const filter = workspace.type === 'team' && workspace.team_id
+        ? `team_id=eq.${workspace.team_id}`
+        : `user_id=eq.${userId}`;
+      
       const channel = supabase
-        .channel(`realtime:${config.id}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
             event: '*',
             schema: 'public',
-            table: config.table,
-            filter: config.filter
+            table: 'tasks',
+            filter: filter
           },
           (payload) => {
-            logger.debug('Realtime event received', {
-              subscriptionId: config.id,
-              eventType: payload.eventType,
-              table: payload.table
-            });
-            
-            config.callback(payload);
+            this.handleRealtimeEvent(channelId, payload, callback);
           }
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            logger.info(`Successfully subscribed to ${config.id}`);
-            // 再接続試行回数をリセット
-            config.reconnectAttempts = 0;
-          } else if (status === 'CHANNEL_ERROR') {
-            logger.error(`Subscription error for ${config.id}`);
-            this.handleSubscriptionError(config);
-          } else if (status === 'TIMED_OUT') {
-            logger.warn(`Subscription timeout for ${config.id}`);
-            this.handleSubscriptionError(config);
-          }
-        });
+        .subscribe();
 
-      this.subscriptions.set(config.id, channel);
+      this.subscriptions.set(channelId, channel);
+      this.eventCallbacks.set(channelId, callback);
       
-      // 接続状態の監視
-      this.monitorSubscription(config.id, channel);
-
+      return channelId; // subscriptionIdを返す
     } catch (error) {
-      logger.error(`Failed to create subscription ${config.id}`, error as Error);
-      this.handleSubscriptionError(config);
+      console.error('Failed to subscribe to tasks:', error);
+      return channelId; // エラーでもIDは返す
     }
   }
 
   /**
-   * 購読エラーの処理
-   */
-  private handleSubscriptionError(config: SubscriptionConfig) {
-    if (!config.maxReconnectAttempts || !this.isConnected) return;
-
-    config.reconnectAttempts = (config.reconnectAttempts || 0) + 1;
-
-    if (config.reconnectAttempts <= config.maxReconnectAttempts) {
-      const delay = Math.min(1000 * Math.pow(2, config.reconnectAttempts - 1), 30000);
-      
-      logger.info(`Attempting to reconnect ${config.id} (${config.reconnectAttempts}/${config.maxReconnectAttempts}) in ${delay}ms`);
-
-      const timer = setTimeout(() => {
-        this.createSubscription(config);
-        this.reconnectTimers.delete(config.id);
-      }, delay);
-
-      this.reconnectTimers.set(config.id, timer);
-    } else {
-      logger.error(`Max reconnection attempts reached for ${config.id}`);
-    }
-  }
-
-  /**
-   * 購読の監視
-   */
-  private monitorSubscription(subscriptionId: string, channel: RealtimeChannel) {
-    // ヘルスチェック（30秒間隔）
-    const healthCheck = setInterval(() => {
-      if (!this.isConnected) return;
-
-      // チャンネルの状態確認
-      const currentChannel = this.subscriptions.get(subscriptionId);
-      if (currentChannel !== channel) {
-        clearInterval(healthCheck);
-        return;
-      }
-
-      // 必要に応じてping的な処理を実装
-      // supabaseのリアルタイム接続は自動でヘルスチェックされるため、
-      // ここでは基本的な状態確認のみ
-      
-    }, 30000);
-
-    // クリーンアップ処理
-    const originalUnsubscribe = channel.unsubscribe.bind(channel);
-    channel.unsubscribe = () => {
-      clearInterval(healthCheck);
-      return originalUnsubscribe();
-    };
-  }
-
-  /**
-   * 特定の購読を削除
+   * 購読の解除 (SharedTaskBoard互換)
    */
   unsubscribe(subscriptionId: string): void {
     const channel = this.subscriptions.get(subscriptionId);
@@ -266,67 +84,111 @@ export class RealtimeManager {
       this.subscriptions.delete(subscriptionId);
     }
 
-    const timer = this.reconnectTimers.get(subscriptionId);
+    this.eventCallbacks.delete(subscriptionId);
+    
+    // スロットリングタイマーがあればクリア
+    const timer = this.throttleTimers.get(subscriptionId);
     if (timer) {
       clearTimeout(timer);
-      this.reconnectTimers.delete(subscriptionId);
+      this.throttleTimers.delete(subscriptionId);
     }
-
-    logger.debug(`Unsubscribed from ${subscriptionId}`);
   }
 
   /**
-   * 全ての購読を削除
+   * タスクの購読を解除 (旧API互換)
    */
-  unsubscribeAll(): void {
-    for (const [subscriptionId] of this.subscriptions) {
-      this.unsubscribe(subscriptionId);
-    }
-    logger.info('All subscriptions unsubscribed');
+  unsubscribeFromTasks(userId: string, teamId: string | null): void {
+    const channelId = teamId ? `team-tasks-${teamId}` : `personal-tasks-${userId}`;
+    this.unsubscribe(channelId);
   }
 
   /**
-   * 全ての購読を再接続
+   * 購読の更新（古い購読を解除して新しい購読を開始）
    */
-  private reconnectAllSubscriptions(): void {
-    logger.info(`Reconnecting ${this.subscriptions.size} subscriptions`);
-    
-    // Note: 実際の再接続ロジックは、元の購読設定を保持する必要がある
-    // この実装では基本的な構造のみ示している
-    for (const [subscriptionId, channel] of this.subscriptions) {
-      try {
-        // チャンネルの再購読
-        channel.subscribe();
-      } catch (error) {
-        logger.error(`Failed to reconnect subscription ${subscriptionId}`, error as Error);
+  updateSubscription(
+    userId: string,
+    teamId: string | null,
+    callback: (event: RealtimeEvent) => void
+  ): void {
+    // 既存の全ての購読を解除
+    for (const [channelId] of this.subscriptions) {
+      if (channelId.includes(userId)) {
+        const channel = this.subscriptions.get(channelId);
+        if (channel) {
+          channel.unsubscribe();
+          this.subscriptions.delete(channelId);
+        }
+        this.eventCallbacks.delete(channelId);
       }
     }
+
+    // 新しい購読を開始
+    this.subscribeToTasks(userId, teamId, callback);
   }
 
   /**
-   * 購読数の取得
+   * リアルタイムイベントの処理（スロットリング付き）
    */
-  getSubscriptionCount(): number {
+  private handleRealtimeEvent(
+    channelId: string,
+    payload: any,
+    callback: (event: RealtimeEvent) => void
+  ): void {
+    try {
+      const event: RealtimeEvent = {
+        type: payload.eventType,
+        record: payload.eventType === 'DELETE' ? payload.old : payload.new,
+        ...(payload.eventType === 'UPDATE' && { oldRecord: payload.old })
+      };
+
+      // スロットリング処理（200ms）
+      const existingTimer = this.throttleTimers.get(channelId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const timer = setTimeout(() => {
+        callback(event);
+        this.throttleTimers.delete(channelId);
+      }, 200);
+
+      this.throttleTimers.set(channelId, timer);
+    } catch (error) {
+      console.error('Error handling realtime event:', error);
+    }
+  }
+
+  /**
+   * 接続状態を取得
+   */
+  isConnected(): boolean {
+    // Supabaseのリアルタイム接続状態を確認
+    // 簡易実装として、購読があるかどうかで判定
+    return this.subscriptions.size > 0;
+  }
+
+  /**
+   * アクティブな購読数を取得
+   */
+  getActiveSubscriptions(): number {
     return this.subscriptions.size;
   }
 
   /**
-   * 接続状態の取得
+   * 全ての購読をクリーンアップ
    */
-  getConnectionStatus(): boolean {
-    return this.isConnected;
-  }
+  cleanup(): void {
+    for (const [channelId, channel] of this.subscriptions) {
+      channel.unsubscribe();
+    }
+    this.subscriptions.clear();
+    this.eventCallbacks.clear();
 
-  /**
-   * デバッグ情報の取得
-   */
-  getDebugInfo(): Record<string, unknown> {
-    return {
-      subscriptionCount: this.subscriptions.size,
-      isConnected: this.isConnected,
-      subscriptionIds: Array.from(this.subscriptions.keys()),
-      activeReconnectTimers: this.reconnectTimers.size
-    };
+    // 全てのスロットリングタイマーをクリア
+    for (const timer of this.throttleTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.throttleTimers.clear();
   }
 }
 

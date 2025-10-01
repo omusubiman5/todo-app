@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 
+export const dynamic = "force-dynamic";
+
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();

@@ -1,0 +1,198 @@
+import { getUserTeams, createTeam, updateTeam, deleteTeam } from '@/lib/teamService';
+
+// Supabaseをモック
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: jest.fn(),
+    auth: {
+      getUser: jest.fn()
+    }
+  }
+}));
+
+import { supabase } from '@/lib/supabase';
+const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+
+describe('TeamService', () => {
+  const mockUserId = 'test-user-id';
+  const mockTeam = {
+    id: 'team-1',
+    name: 'Test Team',
+    description: 'Test team description',
+    avatar_url: null,
+    created_by: mockUserId,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // デフォルトのauth.getUserモック
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: mockUserId } },
+      error: null
+    });
+  });
+
+  describe('getUserTeams', () => {
+    it('ユーザーのチーム一覧を正しく取得する', async () => {
+      const mockOwnedTeams = [mockTeam];
+      const mockMemberTeams = [];
+      const mockGuestTeams = [];
+
+      // 所有チーム取得のモック
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: mockOwnedTeams,
+            error: null
+          })
+        })
+      });
+
+      // メンバーチーム取得のモック
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({
+              data: mockMemberTeams,
+              error: null
+            })
+          })
+        })
+      });
+
+      // ゲストチーム取得のモック
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({
+              data: mockGuestTeams,
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await getUserTeams();
+
+      expect(result).toEqual({
+        owned_teams: mockOwnedTeams,
+        member_teams: mockMemberTeams,
+        guest_teams: mockGuestTeams
+      });
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('teams');
+      expect(mockSupabase.from).toHaveBeenCalledWith('team_members');
+    });
+  });
+
+  describe('createTeam', () => {
+    it('新しいチームを正しく作成する', async () => {
+      const teamData = {
+        name: 'New Team',
+        description: 'New team description'
+      };
+
+      const createdTeam = { ...mockTeam, ...teamData };
+
+      // チーム作成のモック
+      mockSupabase.from.mockReturnValueOnce({
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: createdTeam,
+              error: null
+            })
+          })
+        })
+      });
+
+      // チームメンバー追加のモック
+      mockSupabase.from.mockReturnValueOnce({
+        insert: jest.fn().mockResolvedValue({ error: null })
+      });
+
+      const result = await createTeam(teamData);
+
+      expect(result).toEqual(createdTeam);
+      expect(mockSupabase.from).toHaveBeenCalledWith('teams');
+      expect(mockSupabase.from).toHaveBeenCalledWith('team_members');
+    });
+  });
+
+  describe('updateTeam', () => {
+    it('チーム情報を正しく更新する', async () => {
+      const teamId = 'team-1';
+      const updates = {
+        name: 'Updated Team Name',
+        description: 'Updated description'
+      };
+
+      const updatedTeam = { ...mockTeam, ...updates };
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: updatedTeam,
+                error: null
+              })
+            })
+          })
+        })
+      });
+
+      const result = await updateTeam(teamId, updates);
+
+      expect(result).toEqual(updatedTeam);
+      expect(mockSupabase.from).toHaveBeenCalledWith('teams');
+    });
+  });
+
+  describe('deleteTeam', () => {
+    it('チームを正しく削除する', async () => {
+      const teamId = 'team-1';
+
+      mockSupabase.from.mockReturnValue({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null })
+        })
+      });
+
+      await deleteTeam(teamId);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('teams');
+    });
+  });
+
+  describe('エラーハンドリング', () => {
+    it('認証エラーを適切に処理する', async () => {
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: null },
+        error: { message: 'Not authenticated' }
+      });
+
+      await expect(getUserTeams()).rejects.toThrow('認証が必要です');
+    });
+
+    it('データベースエラーを適切に処理する', async () => {
+      const teamData = { name: 'Test Team', description: 'Test' };
+
+      mockSupabase.from.mockReturnValue({
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Database error' }
+            })
+          })
+        })
+      });
+
+      await expect(createTeam(teamData)).rejects.toThrow('Database error');
+    });
+  });
+});

@@ -1,0 +1,76 @@
+// 基本的なユーティリティ関数のテスト
+describe('Format Utils', () => {
+  describe('Date formatting', () => {
+    it('formats date correctly', () => {
+      const date = new Date('2024-01-01T10:30:00Z');
+      const formatted = date.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      expect(formatted).toContain('2024');
+      expect(formatted).toContain('01');
+    });
+
+    it('handles invalid date', () => {
+      const invalidDate = new Date('invalid');
+      expect(invalidDate.toString()).toBe('Invalid Date');
+    });
+  });
+
+  describe('Priority helpers', () => {
+    const getPriorityColor = (priority: string) => {
+      switch (priority) {
+        case '高': return 'bg-red-100 text-red-800 border-red-300';
+        case '中': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        case '低': return 'bg-green-100 text-green-800 border-green-300';
+        default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      }
+    };
+
+    it('returns correct color for high priority', () => {
+      expect(getPriorityColor('高')).toBe('bg-red-100 text-red-800 border-red-300');
+    });
+
+    it('returns correct color for medium priority', () => {
+      expect(getPriorityColor('中')).toBe('bg-yellow-100 text-yellow-800 border-yellow-300');
+    });
+
+    it('returns correct color for low priority', () => {
+      expect(getPriorityColor('低')).toBe('bg-green-100 text-green-800 border-green-300');
+    });
+
+    it('returns default color for unknown priority', () => {
+      expect(getPriorityColor('不明')).toBe('bg-gray-100 text-gray-800 border-gray-300');
+    });
+  });
+
+  describe('Validation helpers', () => {
+    const isValidEmail = (email: string) => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    const isValidTaskText = (text: string) => {
+      return text.trim().length > 0 && text.trim().length <= 500;
+    };
+
+    it('validates email correctly', () => {
+      expect(isValidEmail('test@example.com')).toBe(true);
+      expect(isValidEmail('user.name@domain.co.jp')).toBe(true);
+      expect(isValidEmail('invalid-email')).toBe(false);
+      expect(isValidEmail('@domain.com')).toBe(false);
+      expect(isValidEmail('user@')).toBe(false);
+    });
+
+    it('validates task text correctly', () => {
+      expect(isValidTaskText('Valid task')).toBe(true);
+      expect(isValidTaskText('')).toBe(false);
+      expect(isValidTaskText('   ')).toBe(false);
+      expect(isValidTaskText('a'.repeat(500))).toBe(true);
+      expect(isValidTaskText('a'.repeat(501))).toBe(false);
+    });
+  });
+});

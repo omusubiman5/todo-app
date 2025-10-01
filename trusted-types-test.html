@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trusted Types Test</title>
+    <meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types default test-policy 'allow-duplicates'; script-src 'self' 'unsafe-inline';">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Trusted Types Implementation Test</h1>
+
+    <div id="test-results"></div>
+
+    <script>
+        const results = document.getElementById('test-results');
+
+        function addResult(title, status, message, details = '') {
+            const div = document.createElement('div');
+            div.className = `test-result ${status}`;
+            div.innerHTML = `
+                <h3>${title}: ${status.toUpperCase()}</h3>
+                <p>${message}</p>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        // Test 1: Check if Trusted Types is supported
+        if (typeof window.trustedTypes !== 'undefined') {
+            addResult('Trusted Types Support', 'success', 'Browser supports Trusted Types API');
+        } else {
+            addResult('Trusted Types Support', 'error', 'Browser does not support Trusted Types API');
+        }
+
+        // Test 2: Create default policy (similar to the app)
+        try {
+            if (window.trustedTypes && !window.trustedTypes.defaultPolicy) {
+                const policy = window.trustedTypes.createPolicy('default', {
+                    createHTML: function(input) {
+                        // Simple sanitization for test
+                        return input
+                            .replace(/<script[\\s\\S]*?<\\/script>/gi, '')
+                            .replace(/javascript:/gi, '')
+                            .replace(/on\\w+\\s*=/gi, '');
+                    },
+                    createScript: function(input) {
+                        // Allow basic scripts for testing
+                        return input;
+                    },
+                    createScriptURL: function(input) {
+                        // Allow same-origin URLs
+                        try {
+                            const url = new URL(input, location.origin);
+                            return url.origin === location.origin ? input : 'about:blank';
+                        } catch {
+                            return input.startsWith('/') ? input : 'about:blank';
+                        }
+                    }
+                });
+
+                addResult('Policy Creation', 'success', 'Default Trusted Types policy created successfully');
+
+                // Test 3: Test HTML creation
+                try {
+                    const trustedHTML = policy.createHTML('<div style="color: green;">This is trusted HTML content</div>');
+                    const isTrusted = trustedHTML instanceof TrustedHTML;
+
+                    if (isTrusted) {
+                        addResult('HTML Creation', 'success', 'Successfully created TrustedHTML instance');
+
+                        // Test 4: Test DOM insertion
+                        try {
+                            const testDiv = document.createElement('div');
+                            testDiv.innerHTML = trustedHTML;
+                            addResult('DOM Insertion', 'success', 'Successfully inserted trusted HTML into DOM',
+                                     `Content: ${testDiv.innerHTML}`);
+                        } catch (error) {
+                            addResult('DOM Insertion', 'error', 'Failed to insert trusted HTML into DOM', error.message);
+                        }
+                    } else {
+                        addResult('HTML Creation', 'error', 'Created content is not a TrustedHTML instance');
+                    }
+                } catch (error) {
+                    addResult('HTML Creation', 'error', 'Failed to create trusted HTML', error.message);
+                }
+
+                // Test 5: Test Script creation
+                try {
+                    const trustedScript = policy.createScript('console.log("Trusted script executed");');
+                    const isScriptTrusted = trustedScript instanceof TrustedScript;
+
+                    if (isScriptTrusted) {
+                        addResult('Script Creation', 'success', 'Successfully created TrustedScript instance');
+                    } else {
+                        addResult('Script Creation', 'warning', 'Script creation returned non-TrustedScript type');
+                    }
+                } catch (error) {
+                    addResult('Script Creation', 'error', 'Failed to create trusted script', error.message);
+                }
+
+                // Test 6: Test ScriptURL creation
+                try {
+                    const trustedURL = policy.createScriptURL('/test-script.js');
+                    const isURLTrusted = trustedURL instanceof TrustedScriptURL;
+
+                    if (isURLTrusted) {
+                        addResult('ScriptURL Creation', 'success', 'Successfully created TrustedScriptURL instance');
+                    } else {
+                        addResult('ScriptURL Creation', 'warning', 'ScriptURL creation returned non-TrustedScriptURL type');
+                    }
+                } catch (error) {
+                    addResult('ScriptURL Creation', 'error', 'Failed to create trusted script URL', error.message);
+                }
+
+            } else if (window.trustedTypes.defaultPolicy) {
+                addResult('Policy Creation', 'warning', 'Default policy already exists',
+                         `Existing policies: ${window.trustedTypes.getPolicyNames().join(', ')}`);
+            }
+        } catch (error) {
+            addResult('Policy Creation', 'error', 'Failed to create Trusted Types policy', error.message);
+        }
+
+        // Test 7: Attempt unsafe operation (should fail with policy active)
+        try {
+            const testDiv = document.createElement('div');
+            testDiv.innerHTML = '<div>Unsafe HTML content</div>';
+            addResult('Unsafe HTML Test', 'warning', 'Unsafe HTML insertion succeeded (Trusted Types may not be enforcing)');
+        } catch (error) {
+            addResult('Unsafe HTML Test', 'success', 'Unsafe HTML insertion blocked by Trusted Types', error.message);
+        }
+
+        // Test 8: Policy information
+        if (window.trustedTypes) {
+            const policyNames = window.trustedTypes.getPolicyNames();
+            const defaultPolicy = window.trustedTypes.defaultPolicy;
+
+            addResult('Policy Information', 'success', 'Trusted Types policy information retrieved',
+                     `Available policies: ${policyNames.join(', ')}\nDefault policy exists: ${!!defaultPolicy}`);
+        }
+
+        console.log('🛡️ Trusted Types test completed');
+    </script>
+
+    <h2>Manual Verification Steps</h2>
+    <ol>
+        <li>Open this file in a modern browser (Chrome 83+, Edge 83+)</li>
+        <li>Check that all tests show SUCCESS or expected WARNING status</li>
+        <li>Open browser DevTools Console and look for the message: "🛡️ Trusted Types test completed"</li>
+        <li>Verify no TrustedHTML/TrustedScript errors appear in console</li>
+        <li>If any tests fail, the Trusted Types implementation may need adjustment</li>
+    </ol>
+
+    <h2>Expected Results</h2>
+    <ul>
+        <li><strong>Trusted Types Support:</strong> SUCCESS (on compatible browsers)</li>
+        <li><strong>Policy Creation:</strong> SUCCESS</li>
+        <li><strong>HTML Creation:</strong> SUCCESS</li>
+        <li><strong>DOM Insertion:</strong> SUCCESS</li>
+        <li><strong>Script Creation:</strong> SUCCESS or WARNING</li>
+        <li><strong>ScriptURL Creation:</strong> SUCCESS or WARNING</li>
+        <li><strong>Unsafe HTML Test:</strong> SUCCESS (indicating blocking) or WARNING</li>
+        <li><strong>Policy Information:</strong> SUCCESS</li>
+    </ul>
+</body>
+</html>

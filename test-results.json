@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 1
+      "actualWorkers": 2
     },
     "preserveOutput": "always",
     "reporter": [
@@ -44,7 +44,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "chromium",
         "name": "chromium",
@@ -60,7 +60,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "firefox",
         "name": "firefox",
@@ -76,7 +76,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "webkit",
         "name": "webkit",
@@ -102,21 +102,21 @@
   },
   "suites": [
     {
-      "title": "critical-bugs-fix-validation.spec.js",
-      "file": "critical-bugs-fix-validation.spec.js",
+      "title": "performance-benchmark.spec.js",
+      "file": "performance-benchmark.spec.js",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "重要バグ修正検証",
-          "file": "critical-bugs-fix-validation.spec.js",
-          "line": 12,
+          "title": "📊 パフォーマンス数値測定",
+          "file": "performance-benchmark.spec.js",
+          "line": 10,
           "column": 6,
           "specs": [
             {
-              "title": "④ タスクボックス透明度とチェックボックス状態の一致",
-              "ok": true,
+              "title": "📈 現在のベースライン性能測定",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -129,437 +129,129 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 28905,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]') to be visible\u001b[22m\n\n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:56:18",
+                        "location": {
+                          "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                          "column": 18,
+                          "line": 56
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 54 |\u001b[39m       \n \u001b[90m 55 |\u001b[39m       \u001b[90m// タスク入力フィールドが表示されるまで待機\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 56 |\u001b[39m       \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]'\u001b[39m\u001b[33m,\u001b[39m { \n \u001b[90m    |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 57 |\u001b[39m         timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m \n \u001b[90m 58 |\u001b[39m       })\u001b[33m;\u001b[39m\n \u001b[90m 59 |\u001b[39m       \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                            "column": 18,
+                            "line": 56
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]') to be visible\u001b[22m\n\n\n  54 |       \n  55 |       // タスク入力フィールドが表示されるまで待機\n> 56 |       await page.waitForSelector('input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]', { \n     |                  ^\n  57 |         timeout: 10000 \n  58 |       });\n  59 |       \n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:56:18"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "📈 ベースライン性能測定を開始...\n"
+                        },
+                        {
+                          "text": "🌐 初回ページロード時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 初回ページロード: 11870.01ms\n"
+                        },
+                        {
+                          "text": "🔐 ログイン処理時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 ログイン処理: 3400.10ms\n"
+                        },
+                        {
+                          "text": "📝 タスク画面表示時間を測定中...\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "❌ テスト実行エラー: page.waitForSelector: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"やること\"], input[placeholder*=\"タスク\"]') to be visible\u001b[22m\n\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-09-06T06:22:13.315Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                        "column": 18,
+                        "line": 56
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9d51ce804c212e0a222f-f4a20f6be698df10cd4e",
+              "file": "performance-benchmark.spec.js",
+              "line": 12,
+              "column": 3
+            },
+            {
+              "title": "🔍 軽量パフォーマンスチェック",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 11873,
+                      "duration": 5466,
                       "errors": [],
                       "stdout": [
                         {
-                          "text": "🚀 テスト開始: ページ初期化\n"
+                          "text": "🔍 軽量パフォーマンスチェックを実行中...\n"
                         },
                         {
-                          "text": "🔐 ログイン処理開始\n"
+                          "text": "⚡ DOMContentLoaded: 2662.64ms\n"
                         },
                         {
-                          "text": "📧 メール入力\n"
+                          "text": "📄 ページタイトル: Create Next App\n"
                         },
                         {
-                          "text": "🔒 パスワード入力\n"
+                          "text": "🌐 URL: http://localhost:3000/\n"
                         },
                         {
-                          "text": "✅ ログインボタンクリック\n"
+                          "text": "📐 画面サイズ: 1280x720\n"
                         },
                         {
-                          "text": "[BROWSER LOG] 🔍 Debug - Supabase URL: https://zmxnsfjmusgmapxbcbpn.supabase.co/\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Debug - Anon Key exists: true\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Debug - Login attempt for: omusubiman@gmail.com\n"
-                        },
-                        {
-                          "text": "⏳ ログイン後のリダイレクト待機\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] 🚨 Unexpected Error Details:\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error type: object\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error name: ReferenceError\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error message: setAuthError is not defined\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error stack: ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Full error object: ReferenceError: setAuthError is not defined\n    at LoginContent.useEffect [as callback] (http://localhost:3000/_next/static/chunks/_848265f4._.js:1029:25)\n    at http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9783:29\n    at Array.map (<anonymous>)\n    at SupabaseAuthClient._notifyAllSubscribers (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:9781:76)\n    at SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8204:28)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Network online: true\n"
-                        },
-                        {
-                          "text": "[PAGE ERROR] setAuthError is not defined\n"
-                        },
-                        {
-                          "text": "[ERROR STACK] ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:283:67)\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "✅ ログイン完了: http://localhost:3000/home\n"
-                        },
-                        {
-                          "text": "🚀 テスト開始: ページ初期化\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] Failed to fetch notifications: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch\n    at http://localhost…static/chunks/node_modules_a20bd2cc._.js:6230:32), hint: , code: }\n"
-                        },
-                        {
-                          "text": "🔐 ログイン処理開始\n"
-                        },
-                        {
-                          "text": "📧 メール入力\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "🔒 パスワード入力\n"
-                        },
-                        {
-                          "text": "✅ ログインボタンクリック\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Debug - Supabase URL: https://zmxnsfjmusgmapxbcbpn.supabase.co/\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Debug - Anon Key exists: true\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Debug - Login attempt for: omusubiman@gmail.com\n"
-                        },
-                        {
-                          "text": "⏳ ログイン後のリダイレクト待機\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] Failed to load resource: the server responded with a status of 400 ()\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] 🚨 Supabase Auth Error Details:\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Message: Invalid login credentials\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Code: invalid_credentials\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Status: 400\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Full error object: AuthApiError: Invalid login credentials\n    at handleError (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7169:11)\n    at async _handleRequest (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7219:9)\n    at async _request (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:7199:18)\n    at async SupabaseAuthClient.signInWithPassword (http://localhost:3000/_next/static/chunks/node_modules_a20bd2cc._.js:8157:23)\n    at async SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:198:30)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] 🚨 Unexpected Error Details:\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error type: object\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error name: ReferenceError\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error message: setAuthError is not defined\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Error stack: ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:224:71)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Full error object: ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:224:71)\n"
-                        },
-                        {
-                          "text": "[BROWSER ERROR] - Network online: true\n"
-                        },
-                        {
-                          "text": "[PAGE ERROR] setAuthError is not defined\n"
-                        },
-                        {
-                          "text": "[ERROR STACK] ReferenceError: setAuthError is not defined\n    at handleLoginError (http://localhost:3000/_next/static/chunks/_848265f4._.js:1052:9)\n    at SecureLoginForm.useCallback[handleSubmit] (http://localhost:3000/_next/static/chunks/_848265f4._.js:283:67)\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ WorkspaceProvider: 実際のチーム管理連携版\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 WorkspaceProvider: getUserTeams呼び出し開始 {user_email: omusubiman@gmail.com, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 getUserTeams呼び出し開始\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 📋📋📋 タスク取得開始 - FETCH CALLED!: {workspace: Object, workspace_type: personal, team_id: null, team_name: 個人タスク, user_id: 5b3c1dc9-f331-4687-9ebe-48419377cccd}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 個人タスクフィルター適用: {userId: 5b3c1dc9-f331-4687-9ebe-48419377cccd, workspace: Object}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ タスク取得成功: {workspace_type: personal, team_name: 個人タスク, tasks_count: 28, tasks: Array(28)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ getUserTeams成功: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ 最終的なチームデータ: {owned_teams: Array(1), member_teams: Array(0), guest_teams: Array(0)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] ✅ ワークスペース設定完了: {personal: Object, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "[BROWSER LOG] 🔍 Navigation - ワークスペースデータ: {currentWorkspace: Object, personalAvailable: true, teamsCount: 1, teams: Array(1)}\n"
-                        },
-                        {
-                          "text": "✅ ログイン完了: http://localhost:3000/home\n"
-                        },
-                        {
-                          "text": "🧪 透明度とチェックボックス状態の確認\n"
-                        },
-                        {
-                          "text": "🔍 既存タスク数: 28\n"
-                        },
-                        {
-                          "text": "📋 タスク 1:\n"
-                        },
-                        {
-                          "text": "  - チェックボックス: チェック済み\n"
-                        },
-                        {
-                          "text": "  - opacity-60: あり\n"
-                        },
-                        {
-                          "text": "✅ 正常: チェック状態と透明度が一致\n"
-                        },
-                        {
-                          "text": "📋 タスク 2:\n"
-                        },
-                        {
-                          "text": "  - チェックボックス: チェック済み\n"
-                        },
-                        {
-                          "text": "  - opacity-60: あり\n"
-                        },
-                        {
-                          "text": "✅ 正常: チェック状態と透明度が一致\n"
-                        },
-                        {
-                          "text": "📋 タスク 3:\n"
-                        },
-                        {
-                          "text": "  - チェックボックス: チェック済み\n"
-                        },
-                        {
-                          "text": "  - opacity-60: あり\n"
-                        },
-                        {
-                          "text": "✅ 正常: チェック状態と透明度が一致\n"
-                        },
-                        {
-                          "text": "✅ 透明度バグは見つかりませんでした\n"
+                          "text": "🌐 ブラウザ: Mozilla/5.0\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-08-31T11:40:27.057Z",
+                      "startTime": "2025-09-06T06:22:13.318Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -567,9 +259,345 @@
                   "status": "expected"
                 }
               ],
-              "id": "bc943389acb620b5b2b8-68f65bfdb7e110dc8c76",
-              "file": "critical-bugs-fix-validation.spec.js",
-              "line": 278,
+              "id": "9d51ce804c212e0a222f-5ed546538dc7924f8a42",
+              "file": "performance-benchmark.spec.js",
+              "line": 186,
+              "column": 3
+            },
+            {
+              "title": "📈 現在のベースライン性能測定",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 19377,
+                      "error": {
+                        "message": "ReferenceError: taskAddTime is not defined",
+                        "stack": "ReferenceError: taskAddTime is not defined\n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:148:22",
+                        "location": {
+                          "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                          "column": 22,
+                          "line": 148
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 146 |\u001b[39m         domElementCount\u001b[33m:\u001b[39m domElementCount\u001b[33m,\u001b[39m\n \u001b[90m 147 |\u001b[39m         memoryUsageMB\u001b[33m:\u001b[39m memoryInfo \u001b[33m?\u001b[39m (memoryInfo\u001b[33m.\u001b[39musedJSHeapSize \u001b[33m/\u001b[39m \u001b[35m1024\u001b[39m \u001b[33m/\u001b[39m \u001b[35m1024\u001b[39m) \u001b[33m:\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 148 |\u001b[39m         taskAddTime\u001b[33m:\u001b[39m taskAddTime \u001b[33m||\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 149 |\u001b[39m         checkboxTime\u001b[33m:\u001b[39m checkboxTime \u001b[33m||\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 150 |\u001b[39m         totalTime\u001b[33m:\u001b[39m totalExecutionTime\n \u001b[90m 151 |\u001b[39m       }\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                            "column": 22,
+                            "line": 148
+                          },
+                          "message": "ReferenceError: taskAddTime is not defined\n\n  146 |         domElementCount: domElementCount,\n  147 |         memoryUsageMB: memoryInfo ? (memoryInfo.usedJSHeapSize / 1024 / 1024) : 0,\n> 148 |         taskAddTime: taskAddTime || 0,\n      |                      ^\n  149 |         checkboxTime: checkboxTime || 0,\n  150 |         totalTime: totalExecutionTime\n  151 |       };\n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:148:22"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "📈 ベースライン性能測定を開始...\n"
+                        },
+                        {
+                          "text": "🌐 初回ページロード時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 初回ページロード: 9795.76ms\n"
+                        },
+                        {
+                          "text": "🔐 ログイン処理時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 ログイン処理: 3591.82ms\n"
+                        },
+                        {
+                          "text": "📝 タスク画面表示時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 タスク画面表示: 40.90ms\n"
+                        },
+                        {
+                          "text": "💾 リソース使用量を測定中...\n"
+                        },
+                        {
+                          "text": "📊 DOM要素数: 504\n"
+                        },
+                        {
+                          "text": "⚡ タスク操作レスポンス時間を測定中...\n"
+                        },
+                        {
+                          "text": "⚠️ タスク追加の確認に失敗: page.waitForSelector: Unknown engine \"text*\" while parsing selector text*=ベンチマークタスク\nCall log:\n\u001b[2m  - waiting for locator('text*=ベンチマークタスク') to be visible\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "📊 総合実行時間: 13783.48ms\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "❌ テスト実行エラー: taskAddTime is not defined\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-09-06T06:22:28.287Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-firefox\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-firefox\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-firefox\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                        "column": 22,
+                        "line": 148
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9d51ce804c212e0a222f-0922d7242211d7cc90eb",
+              "file": "performance-benchmark.spec.js",
+              "line": 12,
+              "column": 3
+            },
+            {
+              "title": "🔍 軽量パフォーマンスチェック",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6974,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔍 軽量パフォーマンスチェックを実行中...\n"
+                        },
+                        {
+                          "text": "⚡ DOMContentLoaded: 3259.53ms\n"
+                        },
+                        {
+                          "text": "📄 ページタイトル: Create Next App\n"
+                        },
+                        {
+                          "text": "🌐 URL: http://localhost:3000/\n"
+                        },
+                        {
+                          "text": "📐 画面サイズ: 1280x720\n"
+                        },
+                        {
+                          "text": "🌐 ブラウザ: Mozilla/5.0\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-06T06:22:48.518Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9d51ce804c212e0a222f-b229e91bffc0f7d61668",
+              "file": "performance-benchmark.spec.js",
+              "line": 186,
+              "column": 3
+            },
+            {
+              "title": "📈 現在のベースライン性能測定",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 10232,
+                      "error": {
+                        "message": "ReferenceError: taskAddTime is not defined",
+                        "stack": "ReferenceError: taskAddTime is not defined\n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:148:22",
+                        "location": {
+                          "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                          "column": 22,
+                          "line": 148
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 146 |\u001b[39m         domElementCount\u001b[33m:\u001b[39m domElementCount\u001b[33m,\u001b[39m\n \u001b[90m 147 |\u001b[39m         memoryUsageMB\u001b[33m:\u001b[39m memoryInfo \u001b[33m?\u001b[39m (memoryInfo\u001b[33m.\u001b[39musedJSHeapSize \u001b[33m/\u001b[39m \u001b[35m1024\u001b[39m \u001b[33m/\u001b[39m \u001b[35m1024\u001b[39m) \u001b[33m:\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 148 |\u001b[39m         taskAddTime\u001b[33m:\u001b[39m taskAddTime \u001b[33m||\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 149 |\u001b[39m         checkboxTime\u001b[33m:\u001b[39m checkboxTime \u001b[33m||\u001b[39m \u001b[35m0\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 150 |\u001b[39m         totalTime\u001b[33m:\u001b[39m totalExecutionTime\n \u001b[90m 151 |\u001b[39m       }\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                            "column": 22,
+                            "line": 148
+                          },
+                          "message": "ReferenceError: taskAddTime is not defined\n\n  146 |         domElementCount: domElementCount,\n  147 |         memoryUsageMB: memoryInfo ? (memoryInfo.usedJSHeapSize / 1024 / 1024) : 0,\n> 148 |         taskAddTime: taskAddTime || 0,\n      |                      ^\n  149 |         checkboxTime: checkboxTime || 0,\n  150 |         totalTime: totalExecutionTime\n  151 |       };\n    at C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js:148:22"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "📈 ベースライン性能測定を開始...\n"
+                        },
+                        {
+                          "text": "🌐 初回ページロード時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 初回ページロード: 3006.67ms\n"
+                        },
+                        {
+                          "text": "🔐 ログイン処理時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 ログイン処理: 3854.82ms\n"
+                        },
+                        {
+                          "text": "📝 タスク画面表示時間を測定中...\n"
+                        },
+                        {
+                          "text": "📊 タスク画面表示: 27.50ms\n"
+                        },
+                        {
+                          "text": "💾 リソース使用量を測定中...\n"
+                        },
+                        {
+                          "text": "📊 DOM要素数: 518\n"
+                        },
+                        {
+                          "text": "⚡ タスク操作レスポンス時間を測定中...\n"
+                        },
+                        {
+                          "text": "⚠️ タスク追加の確認に失敗: page.waitForSelector: Unknown engine \"text*\" while parsing selector text*=ベンチマークタスク\nCall log:\n\u001b[2m  - waiting for locator('text*=ベンチマークタスク') to be visible\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "📊 総合実行時間: 7543.68ms\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "❌ テスト実行エラー: taskAddTime is not defined\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-09-06T06:22:56.342Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-webkit\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-webkit\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\performance-benchmark-📊-パフォーマンス数値測定-📈-現在のベースライン性能測定-webkit\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\omusu\\todo-app\\tests\\performance-benchmark.spec.js",
+                        "column": 22,
+                        "line": 148
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9d51ce804c212e0a222f-dbb728cb5e1ce02c3f38",
+              "file": "performance-benchmark.spec.js",
+              "line": 12,
+              "column": 3
+            },
+            {
+              "title": "🔍 軽量パフォーマンスチェック",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2569,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔍 軽量パフォーマンスチェックを実行中...\n"
+                        },
+                        {
+                          "text": "⚡ DOMContentLoaded: 1240.89ms\n"
+                        },
+                        {
+                          "text": "📄 ページタイトル: Create Next App\n"
+                        },
+                        {
+                          "text": "🌐 URL: http://localhost:3000/\n"
+                        },
+                        {
+                          "text": "📐 画面サイズ: 1280x720\n"
+                        },
+                        {
+                          "text": "🌐 ブラウザ: Mozilla/5.0\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-06T06:23:00.958Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9d51ce804c212e0a222f-a4e722c2cd7c7cbcf02d",
+              "file": "performance-benchmark.spec.js",
+              "line": 186,
               "column": 3
             }
           ]
@@ -579,11 +607,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-08-31T11:40:24.987Z",
-    "duration": 14769.059000000001,
-    "expected": 1,
+    "startTime": "2025-09-06T06:21:58.527Z",
+    "duration": 68933.199,
+    "expected": 3,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 3,
     "flaky": 0
   }
 }

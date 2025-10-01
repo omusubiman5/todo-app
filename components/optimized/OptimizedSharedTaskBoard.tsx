@@ -17,7 +17,7 @@ export default function OptimizedSharedTaskBoard({
   darkMode = false 
 }: OptimizedSharedTaskBoardProps) {
   const { user } = useAuth();
-  const { workspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
 
   // 編集状態管理
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -97,12 +97,12 @@ export default function OptimizedSharedTaskBoard({
         text: taskData.text.trim(),
         priority: taskData.priority,
         user_id: user.id,
-        team_id: workspace.type === 'team' ? workspace.team_id : null
+        team_id: currentWorkspace.type === 'team' ? currentWorkspace.team_id : null
       });
     } catch (err) {
       console.error('タスク作成エラー:', err);
     }
-  }, [user, workspace, createTask]);
+  }, [user, currentWorkspace, createTask]);
 
   // タスク更新ハンドラー
   const handleUpdateTask = useCallback(async (
@@ -189,7 +189,7 @@ export default function OptimizedSharedTaskBoard({
         {/* ヘッダー */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            {workspace.type === 'team' ? `${workspace.team_name} のタスク` : 'マイタスク'}
+            {currentWorkspace.type === 'team' ? `${currentWorkspace.team_name} のタスク` : 'マイタスク'}
           </h1>
           <p className="text-gray-600">
             効率的なタスク管理で生産性を向上させましょう
@@ -215,7 +215,7 @@ export default function OptimizedSharedTaskBoard({
         <TaskStats
           stats={taskStats}
           darkMode={darkMode}
-          workspace={workspace}
+          workspace={currentWorkspace}
         />
 
         {/* タスク作成フォーム */}

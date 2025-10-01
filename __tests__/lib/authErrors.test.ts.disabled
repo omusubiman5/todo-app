@@ -1,0 +1,126 @@
+import { 
+  mapSupabaseError, 
+  logAuthEvent, 
+  AUTH_ERROR_CODES,
+  type AuthError 
+} from '@/lib/authErrors';
+
+describe('Auth Errors', () => {
+  
+  describe('AUTH_ERROR_CODES', () => {
+    it('すべての必要なエラーコードが定義されている', () => {
+      expect(AUTH_ERROR_CODES.INVALID_CREDENTIALS).toBe('invalid_credentials');
+      expect(AUTH_ERROR_CODES.USER_NOT_FOUND).toBe('user_not_found');
+      expect(AUTH_ERROR_CODES.EMAIL_NOT_CONFIRMED).toBe('email_not_confirmed');
+      expect(AUTH_ERROR_CODES.TOO_MANY_ATTEMPTS).toBe('too_many_attempts');
+      expect(AUTH_ERROR_CODES.SESSION_EXPIRED).toBe('session_expired');
+      expect(AUTH_ERROR_CODES.NETWORK_ERROR).toBe('network_error');
+      expect(AUTH_ERROR_CODES.UNKNOWN_ERROR).toBe('unknown_error');
+    });
+  });
+
+  describe('mapSupabaseError', () => {
+    it('レート制限エラーを正しくマップする', () => {
+      const supabaseError = { message: 'Rate limit exceeded' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.TOO_MANY_ATTEMPTS);
+      expect(result.severity).toBe('warning');
+      expect(result.userMessage).toContain('ログイン試行回数が制限を超えました');
+      expect(result.action).toBe('wait_and_retry');
+    });
+
+    it('無効なクレデンシャルエラーを正しくマップする', () => {
+      const supabaseError = { message: 'Invalid login credentials' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.INVALID_CREDENTIALS);
+      expect(result.severity).toBe('error');
+      expect(result.userMessage).toContain('メールアドレスまたはパスワードが正しくありません');
+      expect(result.action).toBe('retry_login');
+    });
+
+    it('メール未確認エラーを正しくマップする', () => {
+      const supabaseError = { message: 'Email not confirmed' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.EMAIL_NOT_CONFIRMED);
+      expect(result.severity).toBe('warning');
+      expect(result.userMessage).toContain('メールアドレスが確認されていません');
+      expect(result.action).toBe('check_email');
+    });
+
+    it('ネットワークエラーを正しくマップする', () => {
+      const supabaseError = { message: 'Network connection failed' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.NETWORK_ERROR);
+      expect(result.severity).toBe('warning');
+      expect(result.userMessage).toContain('ネットワークエラーが発生しました');
+    });
+
+    it('未知のエラーをデフォルトエラーにマップする', () => {
+      const unknownError = { message: 'Some unknown error' };
+      const result = mapSupabaseError(unknownError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.UNKNOWN_ERROR);
+      expect(result.severity).toBe('error');
+      expect(result.userMessage).toContain('予期しないエラーが発生しました');
+    });
+
+    it('nullやundefinedエラーを適切に処理する', () => {
+      const result1 = mapSupabaseError(null);
+      const result2 = mapSupabaseError(undefined);
+      const result3 = mapSupabaseError({});
+      
+      expect(result1.code).toBe(AUTH_ERROR_CODES.UNKNOWN_ERROR);
+      expect(result2.code).toBe(AUTH_ERROR_CODES.UNKNOWN_ERROR);
+      expect(result3.code).toBe(AUTH_ERROR_CODES.UNKNOWN_ERROR);
+    });
+
+    it('大文字小文字を区別しない', () => {
+      const supabaseError = { message: 'INVALID LOGIN CREDENTIALS' };
+      const result = mapSupabaseError(supabaseError);
+      
+      expect(result.code).toBe(AUTH_ERROR_CODES.INVALID_CREDENTIALS);
+    });
+  });
+
+  describe('AuthError interface', () => {
+    it('AuthErrorオブジェクトが正しい構造を持つ', () => {
+      const error = mapSupabaseError({ message: 'Invalid login credentials' });
+      
+      expect(error).toHaveProperty('code');
+      expect(error).toHaveProperty('message');
+      expect(error).toHaveProperty('severity');
+      expect(error).toHaveProperty('userMessage');
+      expect(error).toHaveProperty('action');
+      
+      expect(typeof error.code).toBe('string');
+      expect(typeof error.message).toBe('string');
+      expect(['info', 'warning', 'error', 'critical']).toContain(error.severity);
+      expect(typeof error.userMessage).toBe('string');
+    });
+  });
+
+  describe('Error message security', () => {
+    it('ユーザーメッセージに機密情報が含まれない', () => {
+      const errors = [
+        { message: 'Database connection failed with credentials admin:password123' },
+        { message: 'SQL injection attempt detected: SELECT * FROM users WHERE' },
+        { message: 'Internal server error: /path/to/sensitive/file.ts line 123' }
+      ];
+
+      errors.forEach(error => {
+        const result = mapSupabaseError(error);
+        
+        // 機密情報が含まれていないことを確認
+        expect(result.userMessage).not.toContain('admin');
+        expect(result.userMessage).not.toContain('password');
+        expect(result.userMessage).not.toContain('SQL');
+        expect(result.userMessage).not.toContain('/path/');
+        expect(result.userMessage).not.toContain('line');
+      });
+    });
+  });
+});

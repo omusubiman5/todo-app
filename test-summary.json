@@ -1,0 +1,387 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\omusu\\todo-app\\playwright.config.manual.ts",
+    "rootDir": "C:/Users/omusu/todo-app/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/omusu/todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/omusu/todo-app/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 2,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "basic-navigation.spec.ts",
+      "file": "basic-navigation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Basic Navigation",
+          "file": "basic-navigation.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load homepage successfully",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6578,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/TodoApp/\u001b[39m\nReceived string:  \u001b[31m\"\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 5000ms\u001b[22m\n\u001b[2m    8 × unexpected value \"\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/TodoApp/\u001b[39m\nReceived string:  \u001b[31m\"\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 5000ms\u001b[22m\n\u001b[2m    8 × unexpected value \"\"\u001b[22m\n\n    at C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts:8:24",
+                        "location": {
+                          "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                          "column": 24,
+                          "line": 8
+                        },
+                        "snippet": "\u001b[0m \u001b[90m  6 |\u001b[39m     \n \u001b[90m  7 |\u001b[39m     \u001b[90m// Check if the page loads and has expected elements\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveTitle(\u001b[35m/TodoApp/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m     \n \u001b[90m 10 |\u001b[39m     \u001b[90m// Wait for main content to load\u001b[39m\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                            "column": 24,
+                            "line": 8
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveTitle\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/TodoApp/\u001b[39m\nReceived string:  \u001b[31m\"\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveTitle\" with timeout 5000ms\u001b[22m\n\u001b[2m    8 × unexpected value \"\"\u001b[22m\n\n\n   6 |     \n   7 |     // Check if the page loads and has expected elements\n>  8 |     await expect(page).toHaveTitle(/TodoApp/);\n     |                        ^\n   9 |     \n  10 |     // Wait for main content to load\n  11 |     await page.waitForLoadState('networkidle');\n    at C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts:8:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T11:02:09.964Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-5b63a--load-homepage-successfully-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-5b63a--load-homepage-successfully-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-5b63a--load-homepage-successfully-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                        "column": 24,
+                        "line": 8
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d28afe6aae5d9e5cd19f-2f59756f5587d175413e",
+              "file": "basic-navigation.spec.ts",
+              "line": 4,
+              "column": 7
+            },
+            {
+              "title": "should handle routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1061,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T11:02:09.986Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d28afe6aae5d9e5cd19f-143682c14b158391ee9a",
+              "file": "basic-navigation.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "should be responsive",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1377,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T11:02:11.262Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d28afe6aae5d9e5cd19f-3909663cf8077e330951",
+              "file": "basic-navigation.spec.ts",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should load CSS and JavaScript",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 274,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts:61:23",
+                        "location": {
+                          "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                          "column": 23,
+                          "line": 61
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 59 |\u001b[39m     })\u001b[33m;\u001b[39m\n \u001b[90m 60 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 61 |\u001b[39m     expect(hasStyles)\u001b[33m.\u001b[39mtoBeTruthy()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 62 |\u001b[39m     \n \u001b[90m 63 |\u001b[39m     \u001b[90m// Check if React is loaded (basic check)\u001b[39m\n \u001b[90m 64 |\u001b[39m     \u001b[36mconst\u001b[39m hasReact \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mevaluate(() \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                            "column": 23,
+                            "line": 61
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n  59 |     });\n  60 |     \n> 61 |     expect(hasStyles).toBeTruthy();\n     |                       ^\n  62 |     \n  63 |     // Check if React is loaded (basic check)\n  64 |     const hasReact = await page.evaluate(() => {\n    at C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts:61:23"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T11:02:12.660Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-b7768-uld-load-CSS-and-JavaScript-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-b7768-uld-load-CSS-and-JavaScript-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\omusu\\todo-app\\test-results\\basic-navigation-Basic-Nav-b7768-uld-load-CSS-and-JavaScript-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\omusu\\todo-app\\e2e\\basic-navigation.spec.ts",
+                        "column": 23,
+                        "line": 61
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d28afe6aae5d9e5cd19f-71680ce93cefecf41f1e",
+              "file": "basic-navigation.spec.ts",
+              "line": 52,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "console-errors.spec.ts",
+      "file": "console-errors.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "コンソールエラー確認",
+          "file": "console-errors.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "ページ読み込み時のエラーを確認",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 12361,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔍 ページアクセス開始\n"
+                        },
+                        {
+                          "text": "🌐 Network Error: 429 http://localhost:3000/\n"
+                        },
+                        {
+                          "text": "🔍 Console: [error] Failed to load resource: the server responded with a status of 429 (Too Many Requests)\n"
+                        },
+                        {
+                          "text": "⏳ データ読み込み待機中（10秒）...\n"
+                        },
+                        {
+                          "text": "📄 ページ内容: {\"error\":\"リクエスト制限を超過しました\"}\n"
+                        },
+                        {
+                          "text": "🔄 読み込み中状態: false\n"
+                        },
+                        {
+                          "text": "\n📊 エラーサマリー:\n"
+                        },
+                        {
+                          "text": "- コンソールメッセージ: 1個\n"
+                        },
+                        {
+                          "text": "- ネットワークエラー: 1個\n"
+                        },
+                        {
+                          "text": "\n📝 コンソールメッセージ詳細:\n"
+                        },
+                        {
+                          "text": "  1. [error] Failed to load resource: the server responded with a status of 429 (Too Many Requests)\n"
+                        },
+                        {
+                          "text": "\n🌐 ネットワークエラー詳細:\n"
+                        },
+                        {
+                          "text": "  1. 429 http://localhost:3000/\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-20T11:02:14.152Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7a5bf7e682ebda22706a-c2fd9fb41b04d2dc96b8",
+              "file": "console-errors.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-20T11:02:08.325Z",
+    "duration": 18511.025999999998,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

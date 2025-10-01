@@ -1,0 +1,236 @@
+import React from 'react';
+import { screen, waitFor } from '@testing-library/react';
+import { customRender, createMockUser, createMockTask } from '../utils/test-utils';
+import SharedTaskBoard from '@/components/SharedTaskBoard';
+import { SharedTaskService } from '@/lib/sharedTaskService';
+import * as teamService from '@/lib/teamService';
+
+// Mock services
+jest.mock('@/lib/sharedTaskService');
+jest.mock('@/lib/teamService');
+
+// Mock Supabase client
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    channel: jest.fn(() => ({
+      on: jest.fn().mockReturnThis(),
+      subscribe: jest.fn(),
+      unsubscribe: jest.fn()
+    }))
+  }
+}));
+
+// Mock RealtimeConnectionManager to avoid real-time subscriptions
+jest.mock('@/lib/RealtimeConnectionManager', () => ({
+  RealtimeConnectionManager: {
+    getInstance: jest.fn(() => ({
+      subscribeToTasks: jest.fn(() => 'mock-subscription-id'),
+      unsubscribe: jest.fn(),
+      unsubscribeFromTasks: jest.fn(),
+      updateSubscription: jest.fn(),
+      cleanup: jest.fn()
+    }))
+  },
+  realtimeManager: {
+    subscribeToTasks: jest.fn(() => 'mock-subscription-id'),
+    unsubscribe: jest.fn(),
+    unsubscribeFromTasks: jest.fn(),
+    cleanup: jest.fn()
+  }
+}));
+
+const MockedSharedTaskService = SharedTaskService as jest.Mocked<typeof SharedTaskService>;
+const mockGetUserTeams = teamService.getUserTeams as jest.MockedFunction<typeof teamService.getUserTeams>;
+
+describe('Task Flow Integration Tests', () => {
+  const mockUser = createMockUser();
+  const mockTasks = [
+    createMockTask({ id: '1', text: 'Integration Task 1', completed: false, priority: '高' }),
+    createMockTask({ id: '2', text: 'Integration Task 2', completed: true, priority: '中' }),
+    createMockTask({ id: '3', text: 'Integration Task 3', completed: false, priority: '低' })
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // デフォルトのモック設定
+    MockedSharedTaskService.getTasks.mockResolvedValue(mockTasks);
+    MockedSharedTaskService.createTask.mockImplementation(async (workspace, taskData) => ({
+      id: 'new-task-id',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: mockUser.id,
+      team_id: workspace.type === 'team' ? workspace.team_id : null,
+      assigned_to: null,
+      created_by: mockUser.id,
+      completed: false,
+      ...taskData
+    }));
+    MockedSharedTaskService.updateTask.mockImplementation(async (taskId, updates) => {
+      const task = mockTasks.find(t => t.id === taskId);
+      return { ...task, ...updates } as any;
+    });
+    MockedSharedTaskService.deleteTask.mockResolvedValue(undefined);
+
+    mockGetUserTeams.mockResolvedValue({ personal: [], teams: [] });
+  });
+
+  describe('個人タスク管理フロー', () => {
+    it('SharedTaskBoard が正常にレンダリングされる', async () => {
+      customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      // タスクが読み込まれることを確認
+      expect(MockedSharedTaskService.getTasks).toHaveBeenCalledWith(
+        { type: 'personal', team_id: null },
+        mockUser.id
+      );
+
+      // UI要素の存在確認
+      await waitFor(() => {
+        expect(screen.getByText('タスクを追加')).toBeInTheDocument();
+      });
+
+      // タスクが表示されることを確認
+      await waitFor(() => {
+        expect(screen.getByText('Integration Task 1')).toBeInTheDocument();
+        expect(screen.getByText('Integration Task 2')).toBeInTheDocument();
+        expect(screen.getByText('Integration Task 3')).toBeInTheDocument();
+      });
+    });
+
+    it('新しいタスクを作成できる', async () => {
+      const { user } = customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Integration Task 1')).toBeInTheDocument();
+      });
+
+      // タスク入力フィールドとボタンを取得
+      const taskInput = screen.getByPlaceholderText('タスク内容を入力してください...');
+      const addButton = screen.getByText('追加');
+
+      // 新しいタスクを入力して追加
+      await user.type(taskInput, '新しい統合テストタスク');
+      await user.click(addButton);
+
+      // タスク作成APIが呼ばれることを確認
+      expect(MockedSharedTaskService.createTask).toHaveBeenCalledWith(
+        { type: 'personal', team_id: null },
+        {
+          text: '新しい統合テストタスク',
+          priority: '中',
+          user_id: mockUser.id
+        }
+      );
+    });
+
+    it('タスクを更新できる', async () => {
+      const { user } = customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Integration Task 1')).toBeInTheDocument();
+      });
+
+      // チェックボックスを取得してクリック
+      const checkboxes = screen.getAllByRole('checkbox');
+      await user.click(checkboxes[0]);
+
+      // タスク更新APIが呼ばれることを確認
+      await waitFor(() => {
+        expect(MockedSharedTaskService.updateTask).toHaveBeenCalledWith('1', { completed: true });
+      });
+    });
+  });
+
+  describe('エラーハンドリング', () => {
+    it('タスク読み込みエラー時にエラーメッセージが表示される', async () => {
+      MockedSharedTaskService.getTasks.mockRejectedValueOnce(new Error('読み込みに失敗しました'));
+
+      customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      // エラーメッセージが表示されることを確認
+      await waitFor(() => {
+        expect(screen.getByText(/エラーが発生しました/)).toBeInTheDocument();
+      });
+    });
+
+    it('タスク作成エラー時に適切にハンドリングされる', async () => {
+      MockedSharedTaskService.createTask.mockRejectedValueOnce(new Error('作成に失敗しました'));
+
+      const { user } = customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Integration Task 1')).toBeInTheDocument();
+      });
+
+      const taskInput = screen.getByPlaceholderText('タスク内容を入力してください...');
+      const addButton = screen.getByText('追加');
+
+      await user.type(taskInput, '失敗するタスク');
+      await user.click(addButton);
+
+      // エラーが適切にハンドリングされることを確認
+      await waitFor(() => {
+        expect(screen.getByText(/エラーが発生しました/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('パフォーマンス', () => {
+    it('大量のタスクでもレンダリングが完了する', async () => {
+      const largeTasks = Array.from({ length: 50 }, (_, i) =>
+        createMockTask({ 
+          id: `task-${i}`, 
+          text: `大量テストタスク ${i}`,
+          priority: i % 3 === 0 ? '高' : i % 3 === 1 ? '中' : '低'
+        })
+      );
+
+      MockedSharedTaskService.getTasks.mockResolvedValue(largeTasks);
+
+      const startTime = performance.now();
+      customRender(
+        <SharedTaskBoard 
+          workspace={{ type: 'personal', team_id: null }} 
+        />, 
+        { mockUser }
+      );
+
+      // 最初のタスクがレンダリングされるまで待機
+      await waitFor(() => {
+        expect(screen.getByText('大量テストタスク 0')).toBeInTheDocument();
+      });
+
+      const endTime = performance.now();
+      const renderTime = endTime - startTime;
+
+      // レンダリング時間が合理的な範囲内であることを確認（3秒以内）
+      expect(renderTime).toBeLessThan(3000);
+    });
+  });
+});

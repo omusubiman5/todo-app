@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FaArrowLeft, FaUsers, FaCamera } from 'react-icons/fa';
@@ -25,7 +25,7 @@ export default function TeamDetailPage() {
     description: ''
   });
 
-  const loadTeamDetails = async () => {
+  const loadTeamDetails = useCallback(async () => {
     try {
       setLoading(true);
       const teamData = await getTeamDetails(teamId);
@@ -58,11 +58,11 @@ export default function TeamDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teamId]);
 
   useEffect(() => {
     loadTeamDetails();
-  }, [teamId, loadTeamDetails]);
+  }, [loadTeamDetails]);
 
   const handleUpdateTeam = async () => {
     if (!team) return;
@@ -340,10 +340,17 @@ export default function TeamDetailPage() {
               {team.avatar_url ? (
                 <Image
                   src={team.avatar_url}
-                  alt={team.name}
+                  alt={`${team.name}のチームアバター`}
                   width={64}
                   height={64}
                   className="w-16 h-16 rounded-full object-cover border-2 border-white/30"
+                  // 🚀 Next.js Image最適化設定
+                  priority={true} // チームページのメイン画像なので優先読み込み
+                  placeholder="blur"
+                  // eslint-disable-next-line no-secrets/no-secrets
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                  sizes="64px"
+                  quality={85} // 画質とファイルサイズのバランス
                 />
               ) : (
                 <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center text-white text-2xl font-semibold border-2 border-white/20">
@@ -434,7 +441,7 @@ export default function TeamDetailPage() {
         </div>
         
         <div className="text-sm text-white/70">
-          作成日: {new Date(team.created_at).toLocaleDateString('ja-JP')} | 
+          作成日: {team.created_at ? new Date(team.created_at).toLocaleDateString('ja-JP') : '不明'} | 
           メンバー数: {team.member_count}人
         </div>
         </div>
@@ -449,10 +456,18 @@ export default function TeamDetailPage() {
                 {member.user?.user_metadata?.avatar_url ? (
                   <Image
                     src={member.user.user_metadata.avatar_url}
-                    alt={member.user?.user_metadata?.full_name || member.user?.email || 'メンバー'}
+                    alt={`${member.user?.user_metadata?.full_name || member.user?.email || 'メンバー'}のアバター`}
                     width={40}
                     height={40}
                     className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
+                    // 🚀 Next.js Image最適化設定（メンバーリスト）
+                    priority={false} // メンバーアバターは遅延読み込み
+                    placeholder="blur"
+                    // eslint-disable-next-line no-secrets/no-secrets
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                    sizes="40px"
+                    quality={80} // メンバーアバターは少し低い品質で軽量化
+                    loading="lazy" // 明示的な遅延読み込み
                   />
                 ) : (
                   <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center text-white font-medium border-2 border-white/20">
@@ -464,7 +479,7 @@ export default function TeamDetailPage() {
                     {member.user?.user_metadata?.full_name || member.user?.email}
                   </div>
                   <div className="text-sm text-white/70">
-                    参加日: {new Date(member.joined_at).toLocaleDateString('ja-JP')}
+                    参加日: {member.joined_at ? new Date(member.joined_at).toLocaleDateString('ja-JP') : '不明'}
                   </div>
                 </div>
               </div>
@@ -514,8 +529,8 @@ export default function TeamDetailPage() {
                     <div>
                       <div className="font-medium text-white">{invitation.email}</div>
                       <div className="text-sm text-white/70">
-                        招待日: {new Date(invitation.created_at).toLocaleDateString('ja-JP')} | 
-                        有効期限: {new Date(invitation.expires_at).toLocaleDateString('ja-JP')}
+                        招待日: {invitation.created_at ? new Date(invitation.created_at).toLocaleDateString('ja-JP') : '不明'} | 
+                        有効期限: {invitation.expires_at ? new Date(invitation.expires_at).toLocaleDateString('ja-JP') : '不明'}
                       </div>
                     </div>
                   </div>

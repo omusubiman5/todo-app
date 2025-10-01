@@ -1,0 +1,184 @@
+import { SharedTaskService } from '@/lib/sharedTaskService';
+import { createMockSupabaseClient } from '../utils/test-utils';
+
+// Supabaseクライアントをモック
+const mockSupabaseClient = createMockSupabaseClient();
+
+jest.mock('@/lib/supabase', () => ({
+  supabase: mockSupabaseClient
+}));
+
+import { supabase } from '@/lib/supabase';
+const mockSupabase = supabase as typeof mockSupabaseClient;
+
+describe('SharedTaskService', () => {
+  const mockUserId = 'test-user-id';
+  const mockTask = {
+    id: 'task-1',
+    text: 'Test Task',
+    completed: false,
+    priority: '中' as const,
+    user_id: mockUserId,
+    team_id: null,
+    assigned_to: null,
+    created_by: mockUserId,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('getTasks', () => {
+    it('個人ワークスペースのタスクを正しくフィルタして取得する', async () => {
+      // count クエリのモック
+      const mockCountQuery = mockSupabase.from().select().eq().is().single;
+      mockCountQuery.mockResolvedValueOnce({ data: { count: 1 }, error: null });
+
+      // データ取得クエリのモック
+      const mockDataQuery = mockSupabase.from().select().eq().is().order;
+      mockDataQuery.mockResolvedValueOnce({ data: [mockTask], error: null });
+
+      const workspace = { type: 'personal' as const, team_id: null };
+      const result = await SharedTaskService.getTasks(workspace, mockUserId);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('tasks');
+      expect(result).toEqual([mockTask]);
+    });
+
+    it('チームワークスペースのタスクを正しくフィルタして取得する', async () => {
+      const teamId = 'team-1';
+      const mockQuery = {
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({ data: [mockTask], error: null })
+      };
+
+      const mockCountQuery = {
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { count: 1 }, error: null })
+      };
+
+      // 最初の from 呼び出し (count用)
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue(mockCountQuery)
+      });
+
+      // 2番目の from 呼び出し (データ取得用)
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue(mockQuery)
+      });
+
+      const workspace = { type: 'team' as const, team_id: teamId };
+      const result = await SharedTaskService.getTasks(workspace, mockUserId);
+
+      expect(mockQuery.eq).toHaveBeenCalledWith('team_id', teamId);
+      expect(result).toEqual([mockTask]);
+    });
+  });
+
+  describe('createTask', () => {
+    it('個人タスクを正しく作成する', async () => {
+      const mockInsert = {
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: mockTask,
+          error: null
+        })
+      };
+
+      mockSupabase.from.mockReturnValue({
+        insert: jest.fn().mockReturnValue(mockInsert)
+      });
+
+      const workspace = { type: 'personal' as const, team_id: null };
+      const taskData = {
+        text: 'New Task',
+        priority: '中' as const,
+        user_id: mockUserId
+      };
+
+      const result = await SharedTaskService.createTask(workspace, taskData);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('tasks');
+      expect(result).toEqual(mockTask);
+    });
+
+    it('チームタスクを正しく作成する', async () => {
+      const teamId = 'team-1';
+      const teamTask = { ...mockTask, team_id: teamId };
+      
+      const mockInsert = {
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: teamTask,
+          error: null
+        })
+      };
+
+      mockSupabase.from.mockReturnValue({
+        insert: jest.fn().mockReturnValue(mockInsert)
+      });
+
+      const workspace = { type: 'team' as const, team_id: teamId };
+      const taskData = {
+        text: 'New Team Task',
+        priority: '高' as const,
+        user_id: mockUserId
+      };
+
+      const result = await SharedTaskService.createTask(workspace, taskData);
+
+      expect(result.team_id).toBe(teamId);
+    });
+  });
+
+  describe('updateTask', () => {
+    it('タスクを正しく更新する', async () => {
+      const updatedTask = { ...mockTask, text: 'Updated Task', completed: true };
+      
+      const mockUpdate = {
+        eq: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: updatedTask,
+          error: null
+        })
+      };
+
+      mockSupabase.from.mockReturnValue({
+        update: jest.fn().mockReturnValue(mockUpdate)
+      });
+
+      const updates = { text: 'Updated Task', completed: true };
+      const result = await SharedTaskService.updateTask(mockTask.id, updates);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('tasks');
+      expect(mockUpdate.eq).toHaveBeenCalledWith('id', mockTask.id);
+      expect(result).toEqual(updatedTask);
+    });
+  });
+
+  describe('deleteTask', () => {
+    it('タスクを正しく削除する', async () => {
+      // Mock auth.getUser
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: mockUserId } },
+        error: null
+      });
+
+      const mockDelete = {
+        eq: jest.fn().mockResolvedValue({ error: null })
+      };
+
+      mockSupabase.from.mockReturnValue({
+        delete: jest.fn().mockReturnValue(mockDelete)
+      });
+
+      await SharedTaskService.deleteTask(mockTask.id);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('tasks');
+      expect(mockDelete.eq).toHaveBeenCalledWith('id', mockTask.id);
+    });
+  });
+});

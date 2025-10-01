@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SharedTask, WorkspaceContext } from '@/lib/types';
+import { SharedTask, WorkspaceContext, PaginationOptions } from '@/lib/types';
 import { SharedTaskService } from '@/lib/sharedTaskService';
 
 interface UsePaginatedTasksOptions {
@@ -46,14 +46,16 @@ export const usePaginatedTasks = ({
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      const result = await SharedTaskService.getTasks(workspace, userId, {
+      const options: PaginationOptions = {
         page,
         limit,
         status,
         priority,
         assigned_to,
         cursor: reset ? undefined : cursor
-      });
+      };
+      
+      const result = await SharedTaskService.getTasks(workspace, userId, options);
 
       setState(prev => ({
         ...prev,
