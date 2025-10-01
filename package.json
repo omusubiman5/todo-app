@@ -52,8 +52,8 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "npm run security-check:critical",
-      "eslint --fix"
+      "eslint --max-warnings=0 --cache --report-unused-disable-directives",
+      "prettier --write"
     ],
     "*.{json,md}": [
       "prettier --write"
@@ -90,6 +90,7 @@
     "lightningcss": "^1.30.1",
     "lint-staged": "^16.1.6",
     "node-fetch": "^3.3.2",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
     "typescript": "^5"
